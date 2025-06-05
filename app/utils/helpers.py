@@ -1,0 +1,1 @@
+# Fungsi-fungsi pembantu umum akan ada di sini

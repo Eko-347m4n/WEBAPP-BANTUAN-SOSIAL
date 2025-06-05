@@ -1,0 +1,9 @@
+.env
+project.json
+DATA/dataset.csv
+migrations/env.py
+app.db
+*.sqlite3
+__pycache__/
+*.pyc
+instance/

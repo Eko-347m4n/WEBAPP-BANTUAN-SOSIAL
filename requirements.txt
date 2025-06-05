@@ -1,0 +1,6 @@
+Flask
+pandas
+scikit-learn
+joblib
+python-dotenv
+# numpy # Biasanya sudah terinstal sebagai dependensi pandas/scikit-learn

@@ -1,0 +1,1 @@
+# Inisialisasi terkait database bisa diletakkan di sini
