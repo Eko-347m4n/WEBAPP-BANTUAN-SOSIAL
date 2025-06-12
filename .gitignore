@@ -1,9 +1,25 @@
 .env
 project.json
-DATA/dataset.csv
+
+# Data dan Model
+app/data/dataset.csv
+app/models/knn_model.pkl
+
+# Folder Uploads Pengguna
+uploads/
+app/uploads/ # Jika folder uploads ada di dalam app
+
 migrations/env.py
-app.db
 *.sqlite3
+
+# Python
 __pycache__/
 *.pyc
 instance/
+venv/
+.venv/
+*.log
+
+# IDE
+.idea/
+.vscode/

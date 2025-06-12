@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Cek Kelayakan Masyarakat{% endblock %}
+{% block title %}Prediksi Kelayakan Penerima{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h2>Cek Kelayakan Masyarakat</h2>
+    <h2>Prediksi Kelayakan Penerima Bantuan</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -13,25 +13,22 @@
         {% endif %}
     {% endwith %}
 
-<form method="POST" action="">
+    <form method="POST" action="">
         {{ form.hidden_tag() }}
+
         <p>
             {{ form.nama.label }}<br>
             {{ form.nama(size=50) }}<br>
-            {% if form.nama.errors %}
-                <span class="error">{{ form.nama.errors[0] }}</span>
-            {% endif %}
+            {% for error in form.nama.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
         </p>
 
         <p>
             {{ form.pekerjaan_status.label }}<br>
             {{ form.pekerjaan_status() }}<br>
-            {% if form.pekerjaan_status.errors %}
-                <span class="error">{{ form.pekerjaan_status.errors[0] }}</span>
-            {% endif %}
+            {% for error in form.pekerjaan_status.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
         </p>
 
-        <p><button type="submit" class="btn btn-primary">Cek Kelayakan</button></p>
+        <p>{{ form.submit() }}</p>
     </form>
 
     {% if prediction %}

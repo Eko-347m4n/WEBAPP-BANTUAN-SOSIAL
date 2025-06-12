@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ title }}</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+
+        <fieldset>
+            <legend>Data Diri Penerima</legend>
+            <p>
+                {{ form.nama.label }}<br>
+                {{ form.nama(size=50) }}<br>
+                {% for error in form.nama.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+            </p>
+            <p>
+                {{ form.nik.label }}<br>
+                {{ form.nik(size=30) }}<br>
+                {% for error in form.nik.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+            </p>
+            <p>
+                {{ form.no_kk.label }}<br>
+                {{ form.no_kk(size=30) }}<br>
+                {% for error in form.no_kk.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+            </p>
+            <p>
+                {{ form.alamat_lengkap.label }}<br>
+                {{ form.alamat_lengkap(rows=3, cols=50) }}<br>
+                {% for error in form.alamat_lengkap.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+            </p>
+            <p>
+                {{ form.dtks.label }}<br>
+                {{ form.dtks() }}<br>
+                {% for error in form.dtks.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+            </p>
+        </fieldset>
+
+        <fieldset>
+            <legend>Kriteria Penilaian</legend>
+            {% for kriteria_nama in kriteria_list %}
+                {% set field_name = 'kriteria_' + kriteria_nama.lower().replace(' ', '_').replace('(', '').replace(')', '') %}
+                {% set field = form[field_name] %}
+                <p>
+                    {{ field.label }}<br>
+                    {{ field() }}<br>
+                    {% for error in field.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+                </p>
+            {% endfor %}
+        </fieldset>
+
+        <fieldset>
+            <legend>Unggah Dokumen</legend>
+            <p>{{ form.dokumen_pendukung.label }}<br>{{ form.dokumen_pendukung() }}</p>
+            {% for error in form.dokumen_pendukung.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+        </fieldset>
+        <br>
+        <p>{{ form.submit() }}</p>
+    </form>
+</div>
+<style>.error { color: red; font-size: 0.9em; }</style>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>{{ title }}</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <p>
+            Username: <strong>{{ user.username }}</strong> (Tidak dapat diubah)
+        </p>
+
+        <p>
+            {{ form.email.label }}<br>
+            {{ form.email(size=64, class="form-control") }}<br>
+            {% for error in form.email.errors %}<span class="error">[{{ error }}]</span><br>{% endfor %}
+        </p>
+
+        <p>
+            {{ form.password.label }}<br>
+            {{ form.password(size=32, class="form-control", placeholder="Kosongkan jika tidak ingin mengubah") }}<br>
+            {% for error in form.password.errors %}<span class="error">[{{ error }}]</span><br>{% endfor %}
+        </p>
+
+        <p>
+            {{ form.password2.label }}<br>
+            {{ form.password2(size=32, class="form-control") }}<br>
+            {% for error in form.password2.errors %}<span class="error">[{{ error }}]</span><br>{% endfor %}
+        </p>
+
+        <p>
+            Role: <strong>{{ user.role }}</strong> (Tidak dapat diubah melalui form ini)
+        </p>
+
+        <p>{{ form.submit(class="btn btn-primary") }} <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Batal</a></p>
+    </form>
+</div>
+<style>.error { color: red; font-size: 0.9em; }</style> {# Sebaiknya pindahkan ke file CSS terpusat #}
+{% endblock %}

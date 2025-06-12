@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Pengaturan Kuota dan Passing Grade{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Pengaturan Kuota dan Passing Grade</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+
+        <p>
+            {{ form.passing_grade.label }}<br>
+            {{ form.passing_grade() }}<br>
+            {% for error in form.passing_grade.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+        </p>
+
+        <p>
+            {{ form.kuota.label }}<br>
+            {{ form.kuota() }}<br>
+            {% for error in form.kuota.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
+        </p>
+
+        <p>{{ form.submit() }}</p>
+    </form>
+</div>
+<style>.error { color: red; font-size: 0.9em; }</style>
+{% endblock %}

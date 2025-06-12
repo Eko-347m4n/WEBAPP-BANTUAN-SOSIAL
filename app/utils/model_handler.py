@@ -8,6 +8,7 @@ from sklearn.utils import resample
 import json
 import joblib # Import joblib for saving/loading models
 import os # Import os for directory creation
+from flask import current_app
 
 # ===============================
 # 0. Konfigurasi Global & Kriteria
@@ -23,10 +24,12 @@ PENGURANG_KRITERIA = [
     'PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya'
 ]
 
-# Define model path based on project.json structure
-MODEL_PATH = '/home/b47m4n/KULIAH/SMS6/Project SPK/WEBAPPS/app/models/knn_model.pkl'
+# Define model and dataset paths relative to the app's root or a known base directory
+# For example, if this util is in app/utils and models are in app/models:
+APP_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) # Points to 'app' directory
+MODEL_PATH = os.path.join(APP_ROOT_DIR, 'models', 'knn_model.pkl')
 MODEL_DIR = os.path.dirname(MODEL_PATH)
-DATASET_PATH = '/home/b47m4n/KULIAH/SMS6/Project SPK/WEBAPPS/app/data/dataset.csv' # Use CSV path
+DATASET_PATH = os.path.join(APP_ROOT_DIR, 'data', 'dataset.csv')
 
 # ===============================
 # 1. Fungsi Pemuatan dan Pemrosesan Data Awal
@@ -37,10 +40,10 @@ def load_and_preprocess_data(file_path=DATASET_PATH):
         # Change to read_csv
         df = pd.read_csv(file_path)
     except FileNotFoundError:
-        print(f"Error: File dataset tidak ditemukan di {file_path}")
+        current_app.logger.error(f"Error: File dataset tidak ditemukan di {file_path}")
         return pd.DataFrame()
     except Exception as e:
-        print(f"Error saat memuat atau membaca file CSV: {e}")
+        current_app.logger.error(f"Error saat memuat atau membaca file CSV: {e}")
         return pd.DataFrame()
 
     # Inisialisasi skor awal berdasarkan DTKS
@@ -50,7 +53,7 @@ def load_and_preprocess_data(file_path=DATASET_PATH):
         df['DTKS'] = df['DTKS'].astype(str)
         df['Total_Nilai'] = np.where(df['DTKS'] == 'V', 10, 0)
     else:
-        print("Peringatan: Kolom 'DTKS' tidak ditemukan. 'Total_Nilai' diinisialisasi ke 0.")
+        current_app.logger.warning("Peringatan: Kolom 'DTKS' tidak ditemukan. 'Total_Nilai' diinisialisasi ke 0.")
         df['Total_Nilai'] = 0
 
     # Tambahkan poin dari kriteria penambah
@@ -60,7 +63,7 @@ def load_and_preprocess_data(file_path=DATASET_PATH):
             df[col] = df[col].astype(str)
             df['Total_Nilai'] += (df[col] == 'V').astype(int)
         else:
-            print(f"Peringatan: Kolom penambah '{col}' tidak ditemukan.")
+            current_app.logger.warning(f"Peringatan: Kolom penambah '{col}' tidak ditemukan.")
 
     # Kurangi poin dari kriteria pengurang
     for col in PENGURANG_KRITERIA:
@@ -69,7 +72,7 @@ def load_and_preprocess_data(file_path=DATASET_PATH):
             df[col] = df[col].astype(str)
             df['Total_Nilai'] -= (df[col] == 'V').astype(int)
         else:
-            print(f"Peringatan: Kolom pengurang '{col}' tidak ditemukan.")
+            current_app.logger.warning(f"Peringatan: Kolom pengurang '{col}' tidak ditemukan.")
 
     # Handle potential negative Total_Nilai if needed, though current logic makes it unlikely
     # df['Total_Nilai'] = df['Total_Nilai'].clip(lower=0) # Optional: ensure score is not negative
@@ -85,11 +88,11 @@ def train_and_evaluate_knn(df_input):
     existing_features_for_knn = [f for f in features_for_knn if f in df_input.columns]
 
     if not existing_features_for_knn:
-        print("Error: Tidak ada fitur KNN yang tersedia dalam dataset.")
+        current_app.logger.error("Error: Tidak ada fitur KNN yang tersedia dalam dataset.")
         return None, None
 
     if 'Total_Nilai' not in df_input.columns:
-        print("Error: Kolom 'Total_Nilai' tidak ada untuk menentukan target KNN.")
+        current_app.logger.error("Error: Kolom 'Total_Nilai' tidak ada untuk menentukan target KNN.")
         return None, None
 
     # Prepare features (X) - ensure correct dtypes and handle missing/non-'V' values
@@ -107,22 +110,22 @@ def train_and_evaluate_knn(df_input):
     y = df_input['Layak_KNN_Target']
 
     if y.nunique() < 2:
-        print("Peringatan: Target variable 'Layak_KNN_Target' hanya memiliki satu kelas. KNN mungkin tidak optimal.")
+        current_app.logger.warning("Peringatan: Target variable 'Layak_KNN_Target' hanya memiliki satu kelas. KNN mungkin tidak optimal.")
         # Melatih pada seluruh data jika hanya satu kelas
         if X.empty:
-            print("Error: Data fitur (X) kosong.")
+            current_app.logger.error("Error: Data fitur (X) kosong.")
             return None, None
         n_neighbors_single_class = min(5, len(X)) if len(X) > 0 else 1
         if n_neighbors_single_class == 0: n_neighbors_single_class = 1
 
         clf = KNeighborsClassifier(n_neighbors=n_neighbors_single_class)
         clf.fit(X, y)
-        print("\n=== MODEL KNN (Dilatih pada data dengan kelas tunggal) ===")
+        current_app.logger.info("\n=== MODEL KNN (Dilatih pada data dengan kelas tunggal) ===")
 
         # Save the model even if single class
         os.makedirs(MODEL_DIR, exist_ok=True)
         joblib.dump(clf, MODEL_PATH)
-        print(f"Model KNN disimpan ke {MODEL_PATH}")
+        current_app.logger.info(f"Model KNN disimpan ke {MODEL_PATH}")
 
         return clf, "Model dilatih pada data dengan kelas tunggal, evaluasi penuh tidak dilakukan."
 
@@ -149,14 +152,14 @@ def train_and_evaluate_knn(df_input):
         df_balanced_data = pd.concat([df_majority, df_minority_upsampled])
         X_balanced = df_balanced_data[existing_features_for_knn]
         y_balanced = df_balanced_data['Layak_KNN_Target']
-        print("Info: Oversampling dilakukan pada kelas minoritas.")
+        current_app.logger.info("Info: Oversampling dilakukan pada kelas minoritas.")
     elif df_minority.empty:
-        print("Peringatan: Tidak ada kelas minoritas untuk di-oversample.")
+        current_app.logger.warning("Peringatan: Tidak ada kelas minoritas untuk di-oversample.")
     else:
-        print("Info: Distribusi kelas seimbang atau kelas minoritas tidak lebih kecil. Tidak melakukan oversampling.")
+        current_app.logger.info("Info: Distribusi kelas seimbang atau kelas minoritas tidak lebih kecil. Tidak melakukan oversampling.")
 
     if X_balanced.empty or y_balanced.empty:
-        print("Error: X_balanced atau y_balanced kosong setelah potensi oversampling.")
+        current_app.logger.error("Error: X_balanced atau y_balanced kosong setelah potensi oversampling.")
         return None, None
 
     # Split data latih dan uji
@@ -165,7 +168,7 @@ def train_and_evaluate_knn(df_input):
             X_balanced, y_balanced, test_size=0.2, random_state=42, stratify=y_balanced
         )
     except ValueError as e: # Fallback jika stratifikasi gagal (misal, kelas terlalu kecil setelah split)
-        print(f"Peringatan: Stratifikasi gagal ({e}). Melakukan split tanpa stratifikasi.")
+        current_app.logger.warning(f"Peringatan: Stratifikasi gagal ({e}). Melakukan split tanpa stratifikasi.")
         X_train, X_test, y_train, y_test = train_test_split(
             X_balanced, y_balanced, test_size=0.2, random_state=42
         )
@@ -179,19 +182,19 @@ def train_and_evaluate_knn(df_input):
     # Save the trained model
     os.makedirs(MODEL_DIR, exist_ok=True)
     joblib.dump(clf, MODEL_PATH)
-    print(f"Model KNN disimpan ke {MODEL_PATH}")
+    current_app.logger.info(f"Model KNN disimpan ke {MODEL_PATH}")
 
 
-    print("\n=== EVALUASI MODEL KNN ===")
+    current_app.logger.info("\n=== EVALUASI MODEL KNN ===")
     if not X_test.empty:
         y_pred = clf.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
         report = classification_report(y_test, y_pred, zero_division=0)
-        print(f"Akurasi: {accuracy}")
-        print(report)
+        current_app.logger.info(f"Akurasi: {accuracy}")
+        current_app.logger.info(report)
         return clf, classification_report(y_test, y_pred, output_dict=True, zero_division=0)
     else:
-        print("Tidak ada data tes untuk evaluasi.")
+        current_app.logger.info("Tidak ada data tes untuk evaluasi.")
         return clf, "Tidak ada data tes untuk evaluasi."
 
 # ===============================
@@ -202,10 +205,10 @@ def train_and_evaluate_knn(df_input):
 # It doesn't use the KNN model.
 def apply_saw_ranking(df_input, passing_grade, kuota):
     if 'Total_Nilai' not in df_input.columns:
-        print("Error: Kolom 'Total_Nilai' tidak ditemukan untuk SAW ranking.")
+        current_app.logger.error("Error: Kolom 'Total_Nilai' tidak ditemukan untuk SAW ranking.")
         return pd.DataFrame()
     if df_input.empty:
-        print("Error: DataFrame input untuk SAW ranking kosong.")
+        current_app.logger.error("Error: DataFrame input untuk SAW ranking kosong.")
         return pd.DataFrame()
 
     df_saw = df_input.copy()
@@ -276,9 +279,9 @@ def predict_individual_status(name, pekerjaan_status, df_original, knn_model, pa
             individu_data.loc[:, 'Tidak Berkerja'] = '-'
             individu_data.loc[:, 'Kehilangan Mata Pencaharian'] = '-'
         else:
-            print(f"Status pekerjaan '{pekerjaan_status}' tidak dikenali, fitur pekerjaan tidak diubah.")
+            current_app.logger.warning(f"Status pekerjaan '{pekerjaan_status}' tidak dikenali, fitur pekerjaan tidak diubah.")
     else:
-        print("Peringatan: Kolom 'Tidak Berkerja' atau 'Kehilangan Mata Pencaharian' tidak ada. Update status pekerjaan dilewati.")
+        current_app.logger.warning("Peringatan: Kolom 'Tidak Berkerja' atau 'Kehilangan Mata Pencaharian' tidak ada. Update status pekerjaan dilewati.")
 
 
     # --- SAW Score Calculation (based on potentially updated data) ---
@@ -313,10 +316,10 @@ def predict_individual_status(name, pekerjaan_status, df_original, knn_model, pa
 
     if not existing_features_for_knn:
          knn_prediction = "Tidak dapat diprediksi (fitur KNN tidak ada)"
-         print("Peringatan: Tidak ada fitur KNN yang tersedia untuk prediksi individu.")
+         current_app.logger.warning("Peringatan: Tidak ada fitur KNN yang tersedia untuk prediksi individu.")
     elif knn_model is None:
          knn_prediction = "Model KNN belum dilatih"
-         print("Peringatan: Model KNN tidak tersedia untuk prediksi individu.")
+         current_app.logger.warning("Peringatan: Model KNN tidak tersedia untuk prediksi individu.")
     else:
         # Prepare individual features for KNN prediction
         X_individual = individu_data[existing_features_for_knn].copy()
@@ -335,7 +338,7 @@ def predict_individual_status(name, pekerjaan_status, df_original, knn_model, pa
             knn_prediction = knn_model.predict(X_individual)[0]
         except Exception as e:
             knn_prediction = f"Error prediksi KNN: {e}"
-            print(f"Error saat prediksi KNN untuk {name}: {e}")
+            current_app.logger.error(f"Error saat prediksi KNN untuk {name}: {e}")
 
 
     # Determine final status (e.g., based on KNN prediction)
@@ -374,62 +377,62 @@ if __name__ == "__main__":
     df_processed = load_and_preprocess_data() # Load from CSV
 
     if df_processed.empty:
-        print("Gagal memuat atau memproses data. Program berhenti.")
+        current_app.logger.error("Gagal memuat atau memproses data. Program berhenti.")
         exit()
 
-    print("\n=== DATASET AWAL SETELAH PEMROSESAN NILAI (5 Data Pertama) ===")
+    current_app.logger.info("\n=== DATASET AWAL SETELAH PEMROSESAN NILAI (5 Data Pertama) ===")
     cols_to_show = ['Nama', 'DTKS'] + [col for col in PENAMBAH_KRITERIA if col in df_processed.columns] + \
                      [col for col in PENGURANG_KRITERIA if col in df_processed.columns] + ['Total_Nilai']
-    print(df_processed[cols_to_show].head())
+    current_app.logger.info(f"\n{df_processed[cols_to_show].head()}")
 
     # Train and save the KNN model
     knn_model, knn_report_dict = train_and_evaluate_knn(df_processed.copy()) # Pass a copy to avoid modifying original df
 
     if knn_model:
-        print("Model KNN berhasil dilatih/dievaluasi dan disimpan.")
+        current_app.logger.info("Model KNN berhasil dilatih/dievaluasi dan disimpan.")
     else:
-        print("Gagal melatih/mengevaluasi model KNN.")
+        current_app.logger.error("Gagal melatih/mengevaluasi model KNN.")
 
     # Load the saved model for demonstration (in a real app, you'd load it once)
     loaded_knn_model = None
     if os.path.exists(MODEL_PATH):
         try:
             loaded_knn_model = joblib.load(MODEL_PATH)
-            print(f"Model KNN berhasil dimuat dari {MODEL_PATH}")
+            current_app.logger.info(f"Model KNN berhasil dimuat dari {MODEL_PATH}")
         except Exception as e:
-            print(f"Error memuat model KNN dari {MODEL_PATH}: {e}")
+            current_app.logger.error(f"Error memuat model KNN dari {MODEL_PATH}: {e}")
     else:
-        print(f"Model KNN tidak ditemukan di {MODEL_PATH}. Tidak dapat melakukan prediksi individu.")
+        current_app.logger.error(f"Model KNN tidak ditemukan di {MODEL_PATH}. Tidak dapat melakukan prediksi individu.")
 
 
     passing_grade_saw = 10
     kuota_penerima = 5
 
-    print(f"\n=== RANKING DATA DENGAN PASSING GRADE {passing_grade_saw} DAN KUOTA {kuota_penerima} (SAW) ===")
+    current_app.logger.info(f"\n=== RANKING DATA DENGAN PASSING GRADE {passing_grade_saw} DAN KUOTA {kuota_penerima} (SAW) ===")
     # Use the original df_processed for SAW ranking as it has the Total_Nilai column
     df_ranked_saw = apply_saw_ranking(df_processed.copy(), passing_grade_saw, kuota_penerima) # Pass a copy
     if not df_ranked_saw.empty:
-        print(df_ranked_saw)
+        current_app.logger.info(f"\n{df_ranked_saw}")
     else:
-        print("Tidak ada data yang memenuhi kriteria ranking SAW atau terjadi error.")
+        current_app.logger.info("Tidak ada data yang memenuhi kriteria ranking SAW atau terjadi error.")
 
-    print("\n=== PREDIKSI STATUS INDIVIDU (Menggunakan Model KNN yang Dilatih) ===")
+    current_app.logger.info("\n=== PREDIKSI STATUS INDIVIDU (Menggunakan Model KNN yang Dilatih) ===")
     if loaded_knn_model and not df_processed.empty and 'Nama' in df_processed.columns and not df_processed['Nama'].empty:
         sample_name = df_processed['Nama'].iloc[0]
 
         # Use the loaded_knn_model for individual prediction
         prediksi1 = predict_individual_status(sample_name, "Tidak Bekerja", df_processed, loaded_knn_model, passing_grade_saw)
-        print(f"\nPrediksi untuk '{sample_name}' jika status pekerjaan 'Tidak Bekerja':")
-        print(json.dumps(prediksi1, indent=2, ensure_ascii=False))
+        current_app.logger.info(f"\nPrediksi untuk '{sample_name}' jika status pekerjaan 'Tidak Bekerja':")
+        current_app.logger.info(json.dumps(prediksi1, indent=2, ensure_ascii=False))
 
         prediksi2 = predict_individual_status(sample_name, "Bekerja", df_processed, loaded_knn_model, passing_grade_saw)
-        print(f"\nPrediksi untuk '{sample_name}' jika status pekerjaan 'Bekerja':")
-        print(json.dumps(prediksi2, indent=2, ensure_ascii=False))
+        current_app.logger.info(f"\nPrediksi untuk '{sample_name}' jika status pekerjaan 'Bekerja':")
+        current_app.logger.info(json.dumps(prediksi2, indent=2, ensure_ascii=False))
 
         prediksi_tidak_ada = predict_individual_status("Nama", "Bekerja", df_processed, loaded_knn_model, passing_grade_saw)
-        print(f"\nPrediksi untuk 'Nama':")
-        print(json.dumps(prediksi_tidak_ada, indent=2, ensure_ascii=False))
+        current_app.logger.info(f"\nPrediksi untuk 'Nama':")
+        current_app.logger.info(json.dumps(prediksi_tidak_ada, indent=2, ensure_ascii=False))
     elif not loaded_knn_model:
-        print("Tidak dapat menjalankan prediksi individu: Model KNN tidak tersedia.")
+        current_app.logger.error("Tidak dapat menjalankan prediksi individu: Model KNN tidak tersedia.")
     else:
-         print("Tidak dapat menjalankan prediksi individu: data kosong atau kolom 'Nama' tidak ada/kosong.")
+         current_app.logger.error("Tidak dapat menjalankan prediksi individu: data kosong atau kolom 'Nama' tidak ada/kosong.")
