@@ -4,14 +4,6 @@
 
 {% block content %}
 <div class="container">
-    <h2>{{ title }}</h2>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
     <form method="POST" action="{{ url_for('auth.login') }}">
         {{ form.hidden_tag() }}
         <p>

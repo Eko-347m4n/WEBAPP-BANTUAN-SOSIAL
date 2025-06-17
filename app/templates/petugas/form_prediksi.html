@@ -4,52 +4,68 @@
 
 {% block content %}
 <div class="container">
-    <h2>Prediksi Kelayakan Penerima Bantuan</h2>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h3 class="mb-0"><i class="fas fa-brain"></i> Prediksi Kelayakan Penerima Bantuan</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.nama.label(class="form-control-label") }}
+                    {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), size=50) }}
+                    {% if form.nama.errors %}<div class="invalid-feedback">{% for error in form.nama.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                </div>
 
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-
-        <p>
-            {{ form.nama.label }}<br>
-            {{ form.nama(size=50) }}<br>
-            {% for error in form.nama.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
-        </p>
-
-        <p>
-            {{ form.pekerjaan_status.label }}<br>
-            {{ form.pekerjaan_status() }}<br>
-            {% for error in form.pekerjaan_status.errors %}<span class="error">[{{ error }}]</span>{% endfor %}
-        </p>
-
-        <p>{{ form.submit() }}</p>
-    </form>
+                <div class="form-group">
+                    {{ form.pekerjaan_status.label(class="form-control-label") }}
+                    {{ form.pekerjaan_status(class="form-control custom-select" + (" is-invalid" if form.pekerjaan_status.errors else "")) }}
+                    {% if form.pekerjaan_status.errors %}<div class="invalid-feedback">{% for error in form.pekerjaan_status.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                </div>
+                <hr>
+                {{ form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+    </div>
 
     {% if prediction %}
-    <hr>
-    <h3>Hasil Prediksi untuk {{ prediction.nama }}</h3>
-    <ul>
-        <li>Skor Total SAW Aktual: {{ prediction.skor_total_saw_aktual }}</li>
-        <li>Skor SAW Ternormalisasi: {{ prediction.skor_saw_ternormalisasi }}</li>
-        <li>Status Kelayakan (KNN): {{ prediction.status_kelayakan_knn }}</li>
-        <li>Passing Grade yang Digunakan (SAW): {{ prediction.passing_grade_digunakan_saw }}</li>
-    </ul>
-    <h4>Alasan Prediksi:</h4>
-    <ul>
-        <li>DTKS: {{ 'Ya' if prediction.alasan.DTKS else 'Tidak' }}</li>
-        <li>Faktor Penambah Skor: {{ prediction.alasan['Faktor Penambah Skor'] | join(', ') }}</li>
-        <li>Faktor Pengurang Skor: {{ prediction.alasan['Faktor Pengurang Skor'] | join(', ') }}</li>
-        <li>Status Pekerjaan Input: {{ prediction.alasan['Update Pekerjaan'].status_input }}</li>
-        <li>Tidak Bekerja: {{ prediction.alasan['Update Pekerjaan']['Tidak Berkerja'] }}</li>
-        <li>Kehilangan Mata Pencaharian: {{ prediction.alasan['Update Pekerjaan']['Kehilangan Mata Pencaharian'] }}</li>
-    </ul>
+    <div class="card shadow-sm">
+        <div class="card-header {% if prediction.status_kelayakan_knn == 'Layak' %}bg-success text-white{% elif prediction.status_kelayakan_knn == 'Tidak Layak' %}bg-danger text-white{% else %}bg-warning{% endif %}">
+            <h4 class="mb-0">Hasil Prediksi untuk: <strong>{{ prediction.nama }}</strong></h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-clipboard-check"></i> Detail Skor & Kelayakan:</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Status Kelayakan (KNN):
+                            <span class="badge {% if prediction.status_kelayakan_knn == 'Layak' %}badge-success{% elif prediction.status_kelayakan_knn == 'Tidak Layak' %}badge-danger{% else %}badge-warning{% endif %} badge-pill p-2">{{ prediction.status_kelayakan_knn }}</span>
+                        </li>
+                        <li class="list-group-item">Skor Total SAW Aktual: <span class="font-weight-bold">{{ prediction.skor_total_saw_aktual | round(3) }}</span></li>
+                        <li class="list-group-item">Skor SAW Ternormalisasi: <span class="font-weight-bold">{{ prediction.skor_saw_ternormalisasi | round(3) }}</span></li>
+                        <li class="list-group-item">Passing Grade Digunakan (SAW): <span class="font-weight-bold">{{ prediction.passing_grade_digunakan_saw }}</span></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5><i class="fas fa-info-circle"></i> Alasan Prediksi:</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">DTKS: <span class="font-weight-bold">{{ 'Ya' if prediction.alasan.DTKS else 'Tidak' }}</span></li>
+                        {% if prediction.alasan['Faktor Penambah Skor'] %}
+                        <li class="list-group-item">Faktor Penambah Skor: <span class="font-weight-bold">{{ prediction.alasan['Faktor Penambah Skor'] | join(', ') }}</span></li>
+                        {% endif %}
+                        {% if prediction.alasan['Faktor Pengurang Skor'] %}
+                        <li class="list-group-item">Faktor Pengurang Skor: <span class="font-weight-bold">{{ prediction.alasan['Faktor Pengurang Skor'] | join(', ') }}</span></li>
+                        {% endif %}
+                        <li class="list-group-item">Status Pekerjaan (Input): <span class="font-weight-bold">{{ prediction.alasan['Update Pekerjaan'].status_input }}</span></li>
+                        <li class="list-group-item">Tidak Bekerja (Pembaruan): <span class="font-weight-bold">{{ prediction.alasan['Update Pekerjaan']['Tidak Berkerja'] }}</span></li>
+                        <li class="list-group-item">Kehilangan Mata Pencaharian (Pembaruan): <span class="font-weight-bold">{{ prediction.alasan['Update Pekerjaan']['Kehilangan Mata Pencaharian'] }}</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
     {% endif %}
 </div>
-<style>.error { color: red; font-size: 0.9em; }</style>
+{# Sebaiknya pindahkan style .error ke file CSS terpusat jika masih digunakan. #}
 {% endblock %}

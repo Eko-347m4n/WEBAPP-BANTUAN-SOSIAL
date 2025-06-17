@@ -4,46 +4,61 @@
 
 {% block content %}
 <div class="container">
-    <h2>{{ title }}</h2>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h3 class="mb-0"><i class="fas fa-user-edit"></i> {{ title }}</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="" novalidate>
+                {{ form.hidden_tag() }}
 
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                    <small class="form-text text-muted">Username tidak dapat diubah.</small>
+                </div>
 
-        <p>
-            Username: <strong>{{ user.username }}</strong> (Tidak dapat diubah)
-        </p>
+                <div class="form-group">
+                    {{ form.email.label(class="form-control-label") }}
+                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), size=64) }}
+                    {% if form.email.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
 
-        <p>
-            {{ form.email.label }}<br>
-            {{ form.email(size=64, class="form-control") }}<br>
-            {% for error in form.email.errors %}<span class="error">[{{ error }}]</span><br>{% endfor %}
-        </p>
+                <div class="form-group">
+                    {{ form.password.label(class="form-control-label") }}
+                    {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), size=32, placeholder="Kosongkan jika tidak ingin mengubah") }}
+                    {% if form.password.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
 
-        <p>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32, class="form-control", placeholder="Kosongkan jika tidak ingin mengubah") }}<br>
-            {% for error in form.password.errors %}<span class="error">[{{ error }}]</span><br>{% endfor %}
-        </p>
+                <div class="form-group">
+                    {{ form.password2.label(class="form-control-label") }}
+                    {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else "")) }}
+                    {% if form.password2.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
 
-        <p>
-            {{ form.password2.label }}<br>
-            {{ form.password2(size=32, class="form-control") }}<br>
-            {% for error in form.password2.errors %}<span class="error">[{{ error }}]</span><br>{% endfor %}
-        </p>
+                <div class="form-group">
+                    <label>Role</label>
+                    <input type="text" class="form-control" value="{{ user.role }}" readonly>
+                    <small class="form-text text-muted">Role tidak dapat diubah melalui form ini.</small>
+                </div>
 
-        <p>
-            Role: <strong>{{ user.role }}</strong> (Tidak dapat diubah melalui form ini)
-        </p>
-
-        <p>{{ form.submit(class="btn btn-primary") }} <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Batal</a></p>
-    </form>
+                <hr>
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Batal</a>
+            </form>
+        </div>
+    </div>
 </div>
-<style>.error { color: red; font-size: 0.9em; }</style> {# Sebaiknya pindahkan ke file CSS terpusat #}
 {% endblock %}

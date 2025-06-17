@@ -62,8 +62,8 @@ class PenerimaForm(FlaskForm):
     alamat_lengkap = TextAreaField('Alamat Lengkap')
     dtks = SelectField('Status DTKS', choices=[
         ('', '-- Pilih Status DTKS --'),
-        ('V', 'Terdaftar (V)'),
-        ('-', 'Tidak Terdaftar (-)')
+        ('Ya', 'Terdaftar'),
+        ('Tidak', 'Tidak Terdaftar')
     ], validators=[DataRequired()])
     # Field untuk kriteria akan ditambahkan secara dinamis di route
     # Field untuk upload dokumen bisa ditambahkan di sini jika menggunakan Flask-WTF untuk file
@@ -72,7 +72,22 @@ class PenerimaForm(FlaskForm):
 
 # Anda bisa mendefinisikan SEMUA_KRITERIA_FORM di sini atau di config
 SEMUA_KRITERIA_FORM = [
-    'Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Berkerja',
+    'Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Bekerja',
     'Difabel', 'Penyakit Menahun / Kronis', 'Rumah Tangga Tunggal / Lansia',
     'PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya'
 ]
+
+# Konstanta untuk membantu pengelolaan field kriteria dinamis di routes
+TAHAP1_KRITERIA_NAMES = ['PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya']
+TAHAP2_KRITERIA_NAMES = [
+    'Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Bekerja',
+    'Difabel', 'Penyakit Menahun / Kronis', 'Rumah Tangga Tunggal / Lansia'
+]
+
+# Pilihan default
+KRITERIA_CHOICES_DEFAULT_STYLE = [
+    ('Ya', 'Ya'),
+    ('Tidak', 'Tidak')
+]
+
+DEFAULT_KRITERIA_PROMPT = ('', '-- Pilih Status --')

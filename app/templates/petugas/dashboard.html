@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="jumbotron">
+        <h1 class="display-4">{{ title }}</h1>
+        <p class="lead">Selamat datang, Petugas <strong>{{ current_user.username }}</strong>!</p>
+        <hr class="my-4">
+        <p>Gunakan menu navigasi di atas atau tombol di bawah untuk mengakses fitur yang tersedia.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-user-plus fa-3x text-success mb-3"></i></h5>
+                    <p class="card-text">Input data warga calon penerima bantuan.</p>
+                    <a href="{{ url_for('petugas.tambah_penerima') }}" class="btn btn-success stretched-link">Input Data Warga</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-list fa-3x text-info mb-3"></i></h5>
+                    <p class="card-text">Lihat dan kelola daftar warga yang sudah terdata.</p>
+                    <a href="{{ url_for('petugas.list_penerima') }}" class="btn btn-info stretched-link">Daftar Warga</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title"><i class="fas fa-brain fa-3x text-warning mb-3"></i></h5>
+                    <p class="card-text">Lakukan prediksi kelayakan penerima bantuan.</p>
+                    <a href="{{ url_for('petugas.prediksi') }}" class="btn btn-warning stretched-link">Prediksi Kelayakan</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

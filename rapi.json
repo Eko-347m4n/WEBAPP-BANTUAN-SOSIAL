@@ -1,0 +1,30 @@
+{
+  "naming_convention": {
+    "variables": "camelCase",
+    "functions": "camelCase",
+    "classes": "PascalCase",
+    "constants": "UPPER_CASE"
+  },
+  "indentation": {
+    "type": "spaces",
+    "size": 4
+  },
+  "formatting": {
+    "max_line_length": 100,
+    "line_break_after_imports": true,
+    "quotes": "double",
+    "trailing_commas": "never",
+    "blank_lines_between_functions": 1
+  },
+  "code_principles": {
+    "KISS": "Keep functions short and focused on one task. Avoid overengineering.",
+    "DRY": "Avoid code duplication. Use helper functions in utils/ when logic is repeated.",
+    "YAGNI": "Only implement features that are actually required in current tasks."
+  },
+  "tools": {
+    "linter": "pylint",
+    "formatter": "black",
+    "html_formatter": "prettier",
+    "autoformat_on_save": true
+  }
+}

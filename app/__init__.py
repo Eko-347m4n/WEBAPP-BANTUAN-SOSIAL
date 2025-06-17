@@ -4,12 +4,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager  # Akan diaktifkan nanti
+from flask_wtf.csrf import CSRFProtect # Tambahkan impor ini
 from config import Config
 from app.utils.model_handler import load_and_preprocess_data, MODEL_PATH, DATASET_PATH
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()  # Akan diaktifkan nanti
+csrf = CSRFProtect() # Buat instance CSRFProtect
 login_manager.login_view = 'auth.login'  # Tentukan route login
 login_manager.login_message_category = 'info'
 
@@ -20,6 +22,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)  # Akan diaktifkan nanti
+    csrf.init_app(app) # Inisialisasi CSRFProtect dengan aplikasi
 
     with app.app_context():
         # Load model and dataset once
