@@ -64,25 +64,27 @@ class PenerimaForm(FlaskForm):
     dokumen_pendukung = FileField('Dokumen Pendukung', validators=[FileAllowed(['jpg', 'png', 'pdf'], 'Hanya gambar dan PDF!')])
 
     # --- KRITERIA ---
-    # Menggunakan SelectField untuk merepresentasikan Boolean. Akan dikonversi di route.
-    # 'True' dan 'False' sebagai string akan dievaluasi dengan benar di Python.
-    boolean_choices = [('True', 'Ya'), ('False', 'Tidak')]
+    boolean_choices_with_prompt = [
+        ('', '-- Pilih Status --'), 
+        ('True', 'Ya'), 
+        ('False', 'Tidak')
+    ]
 
     # Status DTKS
-    dtks = SelectField('Terdaftar di DTKS?', choices=boolean_choices, validators=[DataRequired()])
+    dtks = SelectField('Terdaftar di DTKS?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status DTKS.")])
 
     # Kriteria Penambah Skor
-    keluarga_miskin_ekstrem = SelectField('Keluarga Miskin Ekstrem?', choices=boolean_choices, validators=[DataRequired()])
-    kehilangan_mata_pencaharian = SelectField('Kehilangan Mata Pencaharian?', choices=boolean_choices, validators=[DataRequired()])
-    tidak_bekerja = SelectField('Tidak Bekerja?', choices=boolean_choices, validators=[DataRequired()])
-    difabel = SelectField('Difabel?', choices=boolean_choices, validators=[DataRequired()])
-    penyakit_kronis = SelectField('Penyakit Kronis?', choices=boolean_choices, validators=[DataRequired()])
-    rumah_tangga_tunggal_lansia = SelectField('Rumah Tangga Tunggal / Lansia?', choices=boolean_choices, validators=[DataRequired()])
+    keluarga_miskin_ekstrem = SelectField('Keluarga Miskin Ekstrem?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    kehilangan_mata_pencaharian = SelectField('Kehilangan Mata Pencaharian?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    tidak_bekerja = SelectField('Tidak Bekerja?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    difabel = SelectField('Difabel?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    penyakit_kronis = SelectField('Penyakit Kronis?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    rumah_tangga_tunggal_lansia = SelectField('Rumah Tangga Tunggal / Lansia?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
 
     # Kriteria Pengurang Skor
-    pkh = SelectField('Menerima PKH?', choices=boolean_choices, validators=[DataRequired()])
-    kartu_pra_kerja = SelectField('Menerima Kartu Pra Kerja?', choices=boolean_choices, validators=[DataRequired()])
-    bst = SelectField('Menerima BST?', choices=boolean_choices, validators=[DataRequired()])
-    bansos_lainnya = SelectField('Menerima Bansos Pemerintah Lainnya?', choices=boolean_choices, validators=[DataRequired()])
+    pkh = SelectField('Menerima PKH?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    kartu_pra_kerja = SelectField('Menerima Kartu Pra Kerja?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    bst = SelectField('Menerima BST?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
+    bansos_lainnya = SelectField('Menerima Bansos Pemerintah Lainnya?', choices=boolean_choices_with_prompt, validators=[DataRequired(message="Pilih status.")])
 
     submit = SubmitField('Simpan Data Penerima')

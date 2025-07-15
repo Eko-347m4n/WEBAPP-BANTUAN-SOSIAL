@@ -1,6 +1,7 @@
 import numpy as np
 import joblib
 import os
+import requests # Import requests
 from flask import current_app
 
 # ===============================
@@ -19,6 +20,23 @@ PENGURANG_KRITERIA_FIELDS = [
 
 APP_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 MODEL_PATH = os.path.join(APP_ROOT_DIR, 'models', 'knn_model.pkl')
+
+API_WILAYAH_BASE_URL = "https://www.emsifa.com/api-wilayah-indonesia/api/"
+
+def _get_region_name(region_id, endpoint):
+    """Fetches region name from API based on ID."""
+    if not region_id:
+        return None
+    try:
+        response = requests.get(f"{API_WILAYAH_BASE_URL}{endpoint}")
+        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+        data = response.json()
+        for item in data:
+            if str(item['id']) == str(region_id):
+                return item['name']
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(f"Error fetching region data from {endpoint} for ID {region_id}: {e}")
+    return None
 
 # ===============================
 # 1. Fungsi Prediksi Individu (Hybrid: SAW Score + KNN Prediction)
@@ -77,8 +95,18 @@ def predict_individual_status(name, db_session, knn_model, passing_grade):
     max_total_nilai_global = 10 + len(PENAMBAH_KRITERIA_FIELDS)
     skor_saw_individu = skor_individu / max_total_nilai_global if max_total_nilai_global != 0 else 0.0
 
+    # Get region names
+    provinsi_name = _get_region_name(individu.provinsi, 'provinces.json')
+    kabupaten_name = _get_region_name(individu.kabupaten, f'regencies/{individu.provinsi}.json')
+    kecamatan_name = _get_region_name(individu.kecamatan, f'districts/{individu.kabupaten}.json')
+    desa_name = _get_region_name(individu.desa, f'villages/{individu.kecamatan}.json')
+
     return {
         "nama": name,
+        "provinsi": provinsi_name if provinsi_name else individu.provinsi, # Fallback to ID if name not found
+        "kabupaten": kabupaten_name if kabupaten_name else individu.kabupaten,
+        "kecamatan": kecamatan_name if kecamatan_name else individu.kecamatan,
+        "desa": desa_name if desa_name else individu.desa,
         "skor_total_saw_aktual": skor_individu,
         "skor_saw_ternormalisasi": round(skor_saw_individu, 4),
         "status_kelayakan_knn": knn_prediction,

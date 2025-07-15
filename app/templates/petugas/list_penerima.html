@@ -16,10 +16,8 @@
                     <thead class="thead-dark">
                         <tr>
                             <th scope="col">No.</th>
-                            <th scope="col">NIK</th>
                             <th scope="col">Nama Lengkap</th>
                             <th scope="col">Pekerjaan</th>
-                            <th scope="col">Alamat</th>
                             <th scope="col" class="text-center">Status DTKS</th>
                             <th scope="col" class="text-center" style="width: 12%;">Aksi</th>
                         </tr>
@@ -28,26 +26,27 @@
                         {% for penerima in penerima_list %}
                         <tr>
                             <td>{{ loop.index }}</td>
-                            <td>{{ penerima.nik }}</td>
                             <td>{{ penerima.nama }}</td>
                             <td>{{ penerima.pekerjaan }}</td>
-                            <td>{{ penerima.alamat_lengkap | truncate(50) }}</td>
                             <td class="text-center">
-                                {% if penerima.dtks == 'Ya' %}
+                                {% if penerima.dtks %}
                                     <span class="badge badge-success">Terdaftar</span>
-                                {% elif penerima.dtks == 'Tidak' %}
-                                    <span class="badge badge-danger">Tidak Terdaftar</span>
                                 {% else %}
-                                    <span class="badge badge-secondary">Belum Ada Data</span>
+                                    <span class="badge badge-danger">Tidak Terdaftar</span>
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                {# Contoh Tombol Aksi - Sesuaikan dengan route yang ada #}
-                                <a href="#" class="btn btn-light btn-sm" title="Detail"><i class="fas fa-eye"></i></a>
-                                <a href="#" class="btn btn-warning btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
-                                <button type="button" class="btn btn-danger btn-sm" title="Hapus" data-toggle="modal" data-target="#deletePenerimaModal-{{ penerima.id }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="dropdown">
+                                    <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton-{{ penerima.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Aksi
+                                    </button>
+                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton-{{ penerima.id }}">
+                                        <a class="dropdown-item" href="{{ url_for('petugas.edit_penerima', penerima_id=penerima.id) }}"><i class="fas fa-edit mr-2"></i>Edit</a>
+                                        <button class="dropdown-item text-danger" type="button" data-toggle="modal" data-target="#deletePenerimaModal-{{ penerima.id }}">
+                                            <i class="fas fa-trash mr-2"></i>Hapus
+                                        </button>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -76,12 +75,11 @@
                 </button>
             </div>
             <div class="modal-body">
-                Yakin ingin menghapus data <strong>{{ penerima.nama }}</strong>?
+                Yakin ingin menghapus data <strong>{{ penerima.nama }}</strong>? Tindakan ini tidak dapat dibatalkan.
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                {# Ganti # dengan action yang sesuai jika sudah ada #}
-                <form method="POST" action="#" style="display:inline;">
+                <form method="POST" action="{{ url_for('petugas.hapus_penerima', penerima_id=penerima.id) }}" style="display:inline;">
                     <button type="submit" class="btn btn-danger">Hapus</button>
                 </form>
             </div>
@@ -90,3 +88,12 @@
 </div>
 {% endfor %}
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        $('.dropdown-toggle').dropdown();
+    });
+</script>
+{% endblock scripts %}

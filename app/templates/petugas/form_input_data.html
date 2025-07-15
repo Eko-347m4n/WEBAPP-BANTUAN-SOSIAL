@@ -57,7 +57,9 @@
                         </fieldset>
 
                         <fieldset class="mb-4">
-                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Kriteria Kelayakan</legend>
+                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Kriteria kelayakan</legend>
+                            <p class="text-muted small">Pilih "Ya" jika warga memenuhi salah satu kondisi berikut.</p>
+                            
                             <div class="form-group">
                                 {{ form.dtks.label(class="form-control-label") }}
                                 {{ form.dtks(class="form-control custom-select" + (" is-invalid" if form.dtks.errors else "")) }}
@@ -65,22 +67,53 @@
                             </div>
                             
                             <div class="form-row">
-                                <div class="form-group col-md-6">{{ form.keluarga_miskin_ekstrem.label(class="form-control-label") }}{{ form.keluarga_miskin_ekstrem(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.kehilangan_mata_pencaharian.label(class="form-control-label") }}{{ form.kehilangan_mata_pencaharian(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.tidak_bekerja.label(class="form-control-label") }}{{ form.tidak_bekerja(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.difabel.label(class="form-control-label") }}{{ form.difabel(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.penyakit_kronis.label(class="form-control-label") }}{{ form.penyakit_kronis(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.rumah_tangga_tunggal_lansia.label(class="form-control-label") }}{{ form.rumah_tangga_tunggal_lansia(class="form-control custom-select") }}</div>
+                                <div class="form-group col-md-6">
+                                    {{ form.keluarga_miskin_ekstrem.label(class="form-control-label") }}
+                                    {{ form.keluarga_miskin_ekstrem(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.kehilangan_mata_pencaharian.label(class="form-control-label") }}
+                                    {{ form.kehilangan_mata_pencaharian(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.tidak_bekerja.label(class="form-control-label") }}
+                                    {{ form.tidak_bekerja(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.difabel.label(class="form-control-label") }}
+                                    {{ form.difabel(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.penyakit_kronis.label(class="form-control-label") }}
+                                    {{ form.penyakit_kronis(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.rumah_tangga_tunggal_lansia.label(class="form-control-label") }}
+                                    {{ form.rumah_tangga_tunggal_lansia(class="form-control custom-select") }}
+                                </div>
                             </div>
                         </fieldset>
 
                         <fieldset class="mb-4">
                             <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Bantuan Sosial Lainnya</legend>
+                            <p class="text-muted small">Pilih "Ya" jika warga sudah menerima salah satu dari bantuan berikut.</p>
                              <div class="form-row">
-                                <div class="form-group col-md-6">{{ form.pkh.label(class="form-control-label") }}{{ form.pkh(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.kartu_pra_kerja.label(class="form-control-label") }}{{ form.kartu_pra_kerja(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.bst.label(class="form-control-label") }}{{ form.bst(class="form-control custom-select") }}</div>
-                                <div class="form-group col-md-6">{{ form.bansos_lainnya.label(class="form-control-label") }}{{ form.bansos_lainnya(class="form-control custom-select") }}</div>
+                                <div class="form-group col-md-6">
+                                    {{ form.pkh.label(class="form-control-label") }}
+                                    {{ form.pkh(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.kartu_pra_kerja.label(class="form-control-label") }}
+                                    {{ form.kartu_pra_kerja(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.bst.label(class="form-control-label") }}
+                                    {{ form.bst(class="form-control custom-select") }}
+                                </div>
+                                <div class="form-group col-md-6">
+                                    {{ form.bansos_lainnya.label(class="form-control-label") }}
+                                    {{ form.bansos_lainnya(class="form-control custom-select") }}
+                                </div>
                             </div>
                         </fieldset>
 
