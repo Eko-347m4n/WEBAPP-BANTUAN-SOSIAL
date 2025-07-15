@@ -31,32 +31,29 @@ class Setting(db.Model):
         return f'<Setting passing_grade={self.passing_grade} kuota={self.kuota}>'
 
 # Model untuk data penerima (sesuai penggunaan di petugas_routes.py)
-# Sesuaikan field-field ini dengan kebutuhan aplikasi Anda.
-# Ini menggantikan/mengimplementasikan konsep 'DataPenduduk' dari project.json
+# Disesuaikan dengan form di index.html
 class Penerima(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    nama = db.Column(db.String(150), nullable=False)
-    nik = db.Column(db.String(16), unique=True, nullable=False, index=True)
-    no_kk = db.Column(db.String(16), nullable=False, index=True)
-    alamat_lengkap = db.Column(db.Text, nullable=True)
-    dtks = db.Column(db.String(10), nullable=True) # Misal: 'V' atau '-' atau NULL
-    # Tambahkan field lain yang relevan seperti tanggal lahir, jenis kelamin, dll.
-    
-    # Path untuk dokumen pendukung, jika ada
+    nama = db.Column(db.String(150), nullable=False, index=True)
+    provinsi = db.Column(db.String(100), nullable=True)
+    kabupaten = db.Column(db.String(100), nullable=True)
+    kecamatan = db.Column(db.String(100), nullable=True)
+    desa = db.Column(db.String(100), nullable=True)
+    pekerjaan = db.Column(db.String(100), nullable=True)
+    dtks = db.Column(db.String(10), nullable=True)
     dokumen_pendukung_path = db.Column(db.String(255), nullable=True)
 
     # Relasi ke kriteria
     kriteria = db.relationship('KriteriaPenerima', backref='penerima', lazy='dynamic', cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f'<Penerima {self.nik} - {self.nama}>'
+        return f'<Penerima {self.nama}>'
 
 class KriteriaPenerima(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     penerima_id = db.Column(db.Integer, db.ForeignKey('penerima.id'), nullable=False)
-    nama_kriteria = db.Column(db.String(100), nullable=False) # e.g., 'Keluarga Miskin Ekstrem'
-    nilai_kriteria = db.Column(db.String(10), nullable=False) # e.g., 'V' atau '-'
-    # Tambahkan field lain jika perlu, misal bobot kriteria saat itu, dll.
+    nama_kriteria = db.Column(db.String(100), nullable=False)
+    nilai_kriteria = db.Column(db.String(10), nullable=False)
 
     def __repr__(self):
         return f'<KriteriaPenerima {self.penerima_id} - {self.nama_kriteria}: {self.nilai_kriteria}>'

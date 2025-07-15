@@ -3,40 +3,57 @@
 {% block title %}Pengaturan Kuota dan Passing Grade{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <h3 class="mb-0"><i class="fas fa-sliders-h"></i> Pengaturan Kuota dan Passing Grade</h3>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="" novalidate>
-                {{ form.hidden_tag() }}
-
-                <div class="form-group">
-                    {{ form.passing_grade.label(class="form-control-label") }}
-                    {{ form.passing_grade(class="form-control" + (" is-invalid" if form.passing_grade.errors else "")) }}
-                    {% if form.passing_grade.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.passing_grade.errors %}<span>{{ error }}</span>{% endfor %}
-                        </div>
-                    {% endif %}
+<div class="container pt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0"><i class="fas fa-sliders-h"></i> Pengaturan Kuota dan Passing Grade</h3>
                 </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
 
-                <div class="form-group">
-                    {{ form.kuota.label(class="form-control-label") }}
-                    {{ form.kuota(class="form-control" + (" is-invalid" if form.kuota.errors else "")) }}
-                    {% if form.kuota.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.kuota.errors %}<span>{{ error }}</span>{% endfor %}
+                        <div class="form-group mb-3">
+                            {{ form.passing_grade.label(class="form-control-label") }}
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                                </div>
+                                {{ form.passing_grade(class="form-control" + (" is-invalid" if form.passing_grade.errors else ""), placeholder="Contoh: 0.75") }}
+                                {% if form.passing_grade.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.passing_grade.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <small class="form-text text-muted">Nilai ambang batas untuk kelayakan (antara 0 dan 1).</small>
                         </div>
-                    {% endif %}
-                </div>
 
-                <hr>
-                {{ form.submit(class="btn btn-primary") }}
-            </form>
+                        <div class="form-group mb-4">
+                            {{ form.kuota.label(class="form-control-label") }}
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                </div>
+                                {{ form.kuota(class="form-control" + (" is-invalid" if form.kuota.errors else ""), placeholder="Contoh: 100") }}
+                                {% if form.kuota.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.kuota.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <small class="form-text text-muted">Jumlah maksimal penerima bantuan.</small>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex justify-content-end">
+                            {{ form.submit(class="btn btn-info") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-{# Sebaiknya pindahkan style .error ke file CSS terpusat jika masih digunakan. #}
 {% endblock %}

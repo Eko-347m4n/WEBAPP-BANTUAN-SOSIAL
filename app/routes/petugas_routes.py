@@ -61,7 +61,6 @@ def prediksi():
 
     if form.validate_on_submit():
         nama = form.nama.data
-        pekerjaan_status = form.pekerjaan_status.data
 
         # Load dataset
         df = load_and_preprocess_data()
@@ -80,7 +79,7 @@ def prediksi():
         passing_grade = setting.passing_grade
 
         # Call prediction function
-        prediction = predict_individual_status(nama, pekerjaan_status, df, knn_model, passing_grade)
+        prediction = predict_individual_status(nama, df, knn_model, passing_grade)
 
         if 'error' in prediction:
             flash(prediction['error'], 'danger')
@@ -117,9 +116,6 @@ def settings():
 @petugas_bp.route('/tambah_penerima', methods=['GET', 'POST'])
 @login_required
 def tambah_penerima():
-    # Dynamically create the form class with kriteria fields based on PenerimaForm
-    # SEMUA_KRITERIA_FORM should be imported from app.forms
-    # PenerimaForm (base class) should also be imported from app.forms
     ActualPenerimaForm = get_dynamic_penerima_form_class(
         PenerimaForm, SEMUA_KRITERIA_FORM,
         TAHAP1_KRITERIA_NAMES,
@@ -127,35 +123,25 @@ def tambah_penerima():
         KRITERIA_CHOICES_DEFAULT_STYLE,
         DEFAULT_KRITERIA_PROMPT)
     
-    # Instantiate the dynamically created form class
-    form = ActualPenerimaForm() # FlaskForm handles request.form internally
+    form = ActualPenerimaForm()
 
     if form.validate_on_submit():
-        # Cek apakah NIK sudah ada
-        existing_penerima = Penerima.query.filter_by(nik=form.nik.data).first()
-        if existing_penerima:
-            flash('NIK sudah terdaftar. Silakan periksa kembali.', 'danger')
-            return render_template('petugas/form_input_data.html', title='Input Data Penerima Baru', form=form, kriteria_list=SEMUA_KRITERIA_FORM)
-
         penerima = Penerima(
             nama=form.nama.data,
-            nik=form.nik.data,
-            no_kk=form.no_kk.data,
-            alamat_lengkap=form.alamat_lengkap.data,
+            provinsi=request.form.get('provinsi'),
+            kabupaten=request.form.get('kabupaten'),
+            kecamatan=request.form.get('kecamatan'),
+            desa=request.form.get('desa'),
+            pekerjaan=form.pekerjaan.data,
             dtks=form.dtks.data if hasattr(form, 'dtks') and form.dtks.data else None 
         )
         db.session.add(penerima)
         
         try:
-            # Flush untuk mendapatkan ID penerima sebelum menyimpan KriteriaPenerima
-            # Ini penting jika KriteriaPenerima memiliki foreign key ke Penerima.id
-            db.session.flush() 
+            db.session.flush()
 
-            # Simpan kriteria
-            kriteria_entries_to_add = []
             for kriteria_nama in SEMUA_KRITERIA_FORM:
                 field_name_slug = 'kriteria_' + kriteria_nama.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
-                # Akses data dari field yang sekarang sudah terdefinisi dengan baik di kelas form
                 nilai_kriteria_form = getattr(form, field_name_slug).data
                 kriteria_entry = KriteriaPenerima(
                     penerima_id=penerima.id,
@@ -163,14 +149,11 @@ def tambah_penerima():
                     nilai_kriteria=nilai_kriteria_form
                 )
                 db.session.add(kriteria_entry)
-            # db.session.add_all(kriteria_entries_to_add) # Alternatif jika banyak
 
-            # Handle file upload
             if hasattr(form, 'dokumen_pendukung') and form.dokumen_pendukung.data:
                 file = form.dokumen_pendukung.data
-                if file: # Pastikan file benar-benar ada
+                if file:
                     filename = secure_filename(file.filename)
-                    # Konfigurasi UPLOAD_FOLDER sebaiknya path absolut atau relatif terhadap instance_path
                     upload_folder_config = current_app.config.get('UPLOAD_FOLDER', 'uploads')
                     if not os.path.isabs(upload_folder_config):
                         upload_folder = os.path.join(current_app.root_path, upload_folder_config)
@@ -180,12 +163,11 @@ def tambah_penerima():
                     os.makedirs(upload_folder, exist_ok=True)
                     file_path = os.path.join(upload_folder, filename)
                     file.save(file_path)
-                    # Pertimbangkan menyimpan path relatif atau hanya nama file
-                    penerima.dokumen_pendukung_path = file_path # atau os.path.relpath(file_path, current_app.root_path)
+                    penerima.dokumen_pendukung_path = file_path
 
-            db.session.commit() # Commit semua perubahan (penerima, kriteria, path file)
+            db.session.commit()
             flash('Data penerima berhasil ditambahkan!', 'success')
-            return redirect(url_for('petugas.list_penerima')) # Redirect ke daftar untuk UX lebih baik
+            return redirect(url_for('petugas.list_penerima'))
         except Exception as e:
             db.session.rollback()
             flash(f'Terjadi kesalahan saat menyimpan data: {str(e)}', 'danger')

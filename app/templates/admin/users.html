@@ -3,23 +3,23 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+<div class="container pt-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h3 class="mb-0"><i class="fas fa-users"></i> {{ title }}</h3>
             <a href="{{ url_for('admin.add_user') }}" class="btn btn-success"><i class="fas fa-user-plus"></i> Tambah User Baru</a>
         </div>
         <div class="card-body">
             {% if users %}
             <div class="table-responsive">
-                <table class="table table-striped table-hover table-bordered">
+                <table class="table table-striped table-hover table-bordered table-sm">
                     <thead class="thead-dark">
                         <tr>
                             <th scope="col">ID</th>
                             <th scope="col">Username</th>
                             <th scope="col">Email</th>
                             <th scope="col">Role</th>
-                            <th scope="col" style="width: 15%;">Aksi</th>
+                            <th scope="col" class="text-center" style="width: 15%;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -28,13 +28,13 @@
                             <td>{{ user.id }}</td>
                             <td>{{ user.username }}</td>
                             <td>{{ user.email }}</td>
-                            <td><span class="badge badge-info">{{ user.role | capitalize }}</span></td>
-                            <td>
+                            <td><span class="badge badge-{{ 'primary' if user.role == 'admin' else 'info' }}">{{ user.role | capitalize }}</span></td>
+                            <td class="text-center">
                                 {% if user.role != 'admin' %}
                                 <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-warning btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
-                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" style="display:inline;" onsubmit="return confirm('Yakin ingin menghapus user \'{{ user.username }}\'?');">
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Hapus"><i class="fas fa-trash"></i></button>
-                                </form>
+                                <button type="button" class="btn btn-danger btn-sm" title="Hapus" data-toggle="modal" data-target="#deleteUserModal-{{ user.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                                 {% else %}
                                 <span class="text-muted font-italic">Tidak ada aksi</span>
                                 {% endif %}
@@ -45,9 +45,40 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info text-center">Belum ada pengguna yang terdaftar selain admin.</div>
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle fa-2x mb-2"></i><br>
+                Belum ada pengguna yang terdaftar selain admin.
+            </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+{% for user in users %}
+    {% if user.role != 'admin' %}
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteUserModal-{{ user.id }}" tabindex="-1" role="dialog" aria-labelledby="deleteUserModalLabel-{{ user.id }}" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteUserModalLabel-{{ user.id }}">Konfirmasi Hapus</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Yakin ingin menghapus user <strong>{{ user.username }}</strong>?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-danger">Hapus</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
 {% endblock %}

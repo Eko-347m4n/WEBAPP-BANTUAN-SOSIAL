@@ -43,11 +43,6 @@ class EditUserForm(FlaskForm):
 
 class PrediksiForm(FlaskForm):
     nama = StringField('Nama', validators=[DataRequired(), Length(min=2, max=150)])
-    pekerjaan_status = SelectField('Status Pekerjaan', choices=[
-        ('Tidak Bekerja', 'Tidak Bekerja'),
-        ('Kehilangan Pekerjaan', 'Kehilangan Pekerjaan'),
-        ('Bekerja', 'Bekerja')
-    ], validators=[DataRequired()])
     submit = SubmitField('Prediksi')
 
 class SettingForm(FlaskForm):
@@ -57,16 +52,20 @@ class SettingForm(FlaskForm):
 
 class PenerimaForm(FlaskForm):
     nama = StringField('Nama Lengkap', validators=[DataRequired(), Length(max=150)])
-    nik = StringField('NIK', validators=[DataRequired(), Length(min=16, max=16)])
-    no_kk = StringField('Nomor KK', validators=[DataRequired(), Length(min=16, max=16)])
-    alamat_lengkap = TextAreaField('Alamat Lengkap')
+    pekerjaan = SelectField('Pekerjaan', choices=[
+        ('', '-- Pilih Pekerjaan --'),
+        ('PNS', 'PNS'),
+        ('Swasta', 'Swasta'),
+        ('Wiraswasta', 'Wiraswasta'),
+        ('Petani', 'Petani'),
+        ('Nelayan', 'Nelayan'),
+        ('Lainnya', 'Lainnya')
+    ], validators=[DataRequired()])
     dtks = SelectField('Status DTKS', choices=[
         ('', '-- Pilih Status DTKS --'),
         ('Ya', 'Terdaftar'),
         ('Tidak', 'Tidak Terdaftar')
     ], validators=[DataRequired()])
-    # Field untuk kriteria akan ditambahkan secara dinamis di route
-    # Field untuk upload dokumen bisa ditambahkan di sini jika menggunakan Flask-WTF untuk file
     dokumen_pendukung = FileField('Dokumen Pendukung', validators=[FileAllowed(['jpg', 'png', 'pdf'], 'Hanya gambar dan PDF!')])
     submit = SubmitField('Simpan Data Penerima')
 

@@ -29,21 +29,21 @@ PENGURANG_KRITERIA = [
 APP_ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) # Points to 'app' directory
 MODEL_PATH = os.path.join(APP_ROOT_DIR, 'models', 'knn_model.pkl')
 MODEL_DIR = os.path.dirname(MODEL_PATH)
-DATASET_PATH = os.path.join(APP_ROOT_DIR, 'data', 'dataset.csv')
+DATASET_PATH = os.path.join(APP_ROOT_DIR, 'data', 'dataset.xlsx')
 
 # ===============================
 # 1. Fungsi Pemuatan dan Pemrosesan Data Awal
 # ===============================
-# Modified to load CSV
+# Modified to load Excel
 def load_and_preprocess_data(file_path=DATASET_PATH):
     try:
-        # Change to read_csv
-        df = pd.read_csv(file_path)
+        # Change to read_excel
+        df = pd.read_excel(file_path)
     except FileNotFoundError:
         current_app.logger.error(f"Error: File dataset tidak ditemukan di {file_path}")
         return pd.DataFrame()
     except Exception as e:
-        current_app.logger.error(f"Error saat memuat atau membaca file CSV: {e}")
+        current_app.logger.error(f"Error saat memuat atau membaca file Excel: {e}")
         return pd.DataFrame()
 
     # Inisialisasi skor awal berdasarkan DTKS
@@ -251,7 +251,7 @@ def apply_saw_ranking(df_input, passing_grade, kuota):
 # 4. Fungsi Prediksi Individu (Hybrid: SAW Score + KNN Prediction)
 # ===============================
 # Modified to use the trained KNN model
-def predict_individual_status(name, pekerjaan_status, df_original, knn_model, passing_grade):
+def predict_individual_status(name, df_original, knn_model, passing_grade):
     if 'Nama' not in df_original.columns:
         return {"error": "Kolom 'Nama' tidak ditemukan di DataFrame."}
 
@@ -261,28 +261,6 @@ def predict_individual_status(name, pekerjaan_status, df_original, knn_model, pa
 
     # Use .iloc[[0]].copy() to get a copy of the first row
     individu_data = individu_data_list.iloc[[0]].copy()
-
-    # Store original values for logging/reasons
-    original_tidak_bekerja = individu_data['Tidak Berkerja'].iloc[0] if 'Tidak Berkerja' in individu_data.columns else 'N/A'
-    original_kehilangan_pencaharian = individu_data['Kehilangan Mata Pencaharian'].iloc[0] if 'Kehilangan Mata Pencaharian' in individu_data.columns else 'N/A'
-
-    # Update fitur berdasarkan pekerjaan_status
-    # Use .loc for assignment to avoid SettingWithCopyWarning
-    if 'Tidak Berkerja' in individu_data.columns and 'Kehilangan Mata Pencaharian' in individu_data.columns:
-        if pekerjaan_status == "Tidak Bekerja":
-            individu_data.loc[:, 'Tidak Berkerja'] = 'V'
-            individu_data.loc[:, 'Kehilangan Mata Pencaharian'] = '-'
-        elif pekerjaan_status == "Kehilangan Pekerjaan":
-            individu_data.loc[:, 'Tidak Berkerja'] = 'V'
-            individu_data.loc[:, 'Kehilangan Mata Pencaharian'] = 'V'
-        elif pekerjaan_status == "Bekerja":
-            individu_data.loc[:, 'Tidak Berkerja'] = '-'
-            individu_data.loc[:, 'Kehilangan Mata Pencaharian'] = '-'
-        else:
-            current_app.logger.warning(f"Status pekerjaan '{pekerjaan_status}' tidak dikenali, fitur pekerjaan tidak diubah.")
-    else:
-        current_app.logger.warning("Peringatan: Kolom 'Tidak Berkerja' atau 'Kehilangan Mata Pencaharian' tidak ada. Update status pekerjaan dilewati.")
-
 
     # --- SAW Score Calculation (based on potentially updated data) ---
     skor_individu = 0
@@ -351,11 +329,6 @@ def predict_individual_status(name, pekerjaan_status, df_original, knn_model, pa
         "DTKS": True if 'DTKS' in individu_data.columns and individu_data['DTKS'].iloc[0] == 'V' else False,
         "Faktor Penambah Skor": alasan_penambah,
         "Faktor Pengurang Skor": alasan_pengurang,
-        "Update Pekerjaan": {
-            "status_input": pekerjaan_status,
-            "Tidak Berkerja": f"Sebelum: {original_tidak_bekerja}, Sesudah: {individu_data['Tidak Berkerja'].iloc[0] if 'Tidak Berkerja' in individu_data.columns else 'N/A'}",
-            "Kehilangan Mata Pencaharian": f"Sebelum: {original_kehilangan_pencaharian}, Sesudah: {individu_data['Kehilangan Mata Pencaharian'].iloc[0] if 'Kehilangan Mata Pencaharian' in individu_data.columns else 'N/A'}"
-        }
     }
 
     return {
@@ -421,15 +394,11 @@ if __name__ == "__main__":
         sample_name = df_processed['Nama'].iloc[0]
 
         # Use the loaded_knn_model for individual prediction
-        prediksi1 = predict_individual_status(sample_name, "Tidak Bekerja", df_processed, loaded_knn_model, passing_grade_saw)
-        current_app.logger.info(f"\nPrediksi untuk '{sample_name}' jika status pekerjaan 'Tidak Bekerja':")
+        prediksi1 = predict_individual_status(sample_name, df_processed, loaded_knn_model, passing_grade_saw)
+        current_app.logger.info(f"\nPrediksi untuk '{sample_name}':")
         current_app.logger.info(json.dumps(prediksi1, indent=2, ensure_ascii=False))
 
-        prediksi2 = predict_individual_status(sample_name, "Bekerja", df_processed, loaded_knn_model, passing_grade_saw)
-        current_app.logger.info(f"\nPrediksi untuk '{sample_name}' jika status pekerjaan 'Bekerja':")
-        current_app.logger.info(json.dumps(prediksi2, indent=2, ensure_ascii=False))
-
-        prediksi_tidak_ada = predict_individual_status("Nama", "Bekerja", df_processed, loaded_knn_model, passing_grade_saw)
+        prediksi_tidak_ada = predict_individual_status("Nama", df_processed, loaded_knn_model, passing_grade_saw)
         current_app.logger.info(f"\nPrediksi untuk 'Nama':")
         current_app.logger.info(json.dumps(prediksi_tidak_ada, indent=2, ensure_ascii=False))
     elif not loaded_knn_model:

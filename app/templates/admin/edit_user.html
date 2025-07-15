@@ -3,61 +3,82 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <h3 class="mb-0"><i class="fas fa-user-edit"></i> {{ title }}</h3>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="" novalidate>
-                {{ form.hidden_tag() }}
-
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" class="form-control" value="{{ user.username }}" readonly>
-                    <small class="form-text text-muted">Username tidak dapat diubah.</small>
+<div class="container pt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-warning">
+                    <h3 class="mb-0"><i class="fas fa-user-edit"></i> {{ title }}</h3>
                 </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" novalidate>
+                        {{ form.hidden_tag() }}
 
-                <div class="form-group">
-                    {{ form.email.label(class="form-control-label") }}
-                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), size=64) }}
-                    {% if form.email.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                        <div class="form-group mb-3">
+                            <label>Username</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user"></i></span></div>
+                                <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                            </div>
+                            <small class="form-text text-muted">Username tidak dapat diubah.</small>
                         </div>
-                    {% endif %}
-                </div>
 
-                <div class="form-group">
-                    {{ form.password.label(class="form-control-label") }}
-                    {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), size=32, placeholder="Kosongkan jika tidak ingin mengubah") }}
-                    {% if form.password.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
+                        <div class="form-group mb-3">
+                            {{ form.email.label(class="form-control-label") }}
+                             <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-envelope"></i></span></div>
+                                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="Email") }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% endif %}
-                </div>
 
-                <div class="form-group">
-                    {{ form.password2.label(class="form-control-label") }}
-                    {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else "")) }}
-                    {% if form.password2.errors %}
-                        <div class="invalid-feedback">
-                            {% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}
+                        <div class="form-group mb-3">
+                            {{ form.password.label(class="form-control-label") }}
+                            <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-lock"></i></span></div>
+                                {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Kosongkan jika tidak ingin mengubah") }}
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
-                    {% endif %}
-                </div>
 
-                <div class="form-group">
-                    <label>Role</label>
-                    <input type="text" class="form-control" value="{{ user.role }}" readonly>
-                    <small class="form-text text-muted">Role tidak dapat diubah melalui form ini.</small>
-                </div>
+                        <div class="form-group mb-4">
+                            {{ form.password2.label(class="form-control-label") }}
+                            <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-lock"></i></span></div>
+                                {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else ""), placeholder="Konfirmasi Password Baru") }}
+                                {% if form.password2.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-                <hr>
-                {{ form.submit(class="btn btn-primary") }}
-                <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Batal</a>
-            </form>
+                        <div class="form-group mb-4">
+                            <label>Role</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user-tag"></i></span></div>
+                                <input type="text" class="form-control" value="{{ user.role | capitalize }}" readonly>
+                            </div>
+                            <small class="form-text text-muted">Role tidak dapat diubah melalui form ini.</small>
+                        </div>
+
+                        <hr>
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary mr-2">Batal</a>
+                            {{ form.submit(class="btn btn-warning") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>

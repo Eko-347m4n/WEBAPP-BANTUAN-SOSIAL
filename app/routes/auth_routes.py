@@ -16,7 +16,6 @@ def index():
 
     if form.validate_on_submit():
         nama = form.nama.data
-        pekerjaan_status = form.pekerjaan_status.data
         
         setting = Setting.query.first()
         # Gunakan nilai default jika setting tidak ditemukan di DB
@@ -27,7 +26,7 @@ def index():
         elif df_original is None or df_original.empty:
             flash("Data referensi untuk prediksi tidak tersedia atau gagal dimuat. Silakan hubungi admin.", "danger")
         else:
-            prediction_result = predict_individual_status(nama, pekerjaan_status, df_original, knn_model, passing_grade)
+            prediction_result = predict_individual_status(nama, df_original, knn_model, passing_grade)
             if "error" in prediction_result:
                 flash(prediction_result["error"], "warning")
             else:

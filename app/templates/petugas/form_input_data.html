@@ -3,132 +3,237 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <h3 class="mb-0"><i class="fas fa-user-plus"></i> {{ title }}</h3>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="" enctype="multipart/form-data" novalidate>
-                {{ form.hidden_tag() }}
+<div class="container pt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-9">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0"><i class="fas fa-user-plus"></i> {{ title }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="" enctype="multipart/form-data" novalidate>
+                        {{ form.hidden_tag() }}
 
-                <fieldset class="mb-4">
-                    <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Data Diri Penerima</legend>
-                    <div class="form-group">
-                        {{ form.nama.label(class="form-control-label") }}
-                        {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), size=50) }}
-                        {% if form.nama.errors %}<div class="invalid-feedback">{% for error in form.nama.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group col-md-6">
-                            {{ form.nik.label(class="form-control-label") }}
-                            {{ form.nik(class="form-control" + (" is-invalid" if form.nik.errors else ""), size=30) }}
-                            {% if form.nik.errors %}<div class="invalid-feedback">{% for error in form.nik.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                        </div>
-                        <div class="form-group col-md-6">
-                            {{ form.no_kk.label(class="form-control-label") }}
-                            {{ form.no_kk(class="form-control" + (" is-invalid" if form.no_kk.errors else ""), size=30) }}
-                            {% if form.no_kk.errors %}<div class="invalid-feedback">{% for error in form.no_kk.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        {{ form.alamat_lengkap.label(class="form-control-label") }}
-                        {{ form.alamat_lengkap(class="form-control" + (" is-invalid" if form.alamat_lengkap.errors else ""), rows=3) }}
-                        {% if form.alamat_lengkap.errors %}<div class="invalid-feedback">{% for error in form.alamat_lengkap.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                    </div>
-                    {% if form.dtks %}
-                    <div class="form-group">
-                        {{ form.dtks.label(class="form-control-label") }}
-                        {{ form.dtks(class="form-control custom-select" + (" is-invalid" if form.dtks.errors else "")) }}
-                        {% if form.dtks.errors %}<div class="invalid-feedback">{% for error in form.dtks.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                    </div>
-                    {% endif %}
-                </fieldset>
-
-                {% if kriteria_list and kriteria_list|length > 0 %}
-                {# Definisikan daftar kriteria untuk setiap tahap #}
-                {% set tahap1_kriteria_names = ['PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya'] %}
-                {% set tahap2_kriteria_names = ['Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Bekerja', 'Difabel', 'Penyakit Menahun / Kronis', 'Rumah Tangga Tunggal / Lansia'] %}
-
-                <fieldset class="mb-4">
-                    <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Tahap 1: Menerima Jaminan Perlindungan Sosial</legend>
-                    <div class="form-row">
-                    {% for kriteria_nama_display in kriteria_list %}
-                        {% if kriteria_nama_display in tahap1_kriteria_names %}
-                            {% set field_name_slug = 'kriteria_' + kriteria_nama_display.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_') %}
-                            {% set field = form[field_name_slug] %}
-                            {% if field %}
-                            <div class="form-group col-md-6 col-lg-4">
-                                {{ field.label(text=kriteria_nama_display, class="form-control-label") }}
-                                {{ field(class="form-control custom-select" + (" is-invalid" if field.errors else "")) }}
-                                {% if field.errors %}<div class="invalid-feedback">{% for error in field.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                        <fieldset class="mb-4">
+                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Data Diri Penerima</legend>
+                            <div class="form-group">
+                                {{ form.nama.label(class="form-control-label") }}
+                                {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), placeholder="Nama Lengkap Sesuai KTP") }}
+                                {% if form.nama.errors %}<div class="invalid-feedback">{% for error in form.nama.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="provinsi">Provinsi</label>
+                                    <select id="provinsi" name="provinsi" class="form-control custom-select">
+                                        <option selected>-- Pilih Provinsi --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="kabupaten">Kabupaten/Kota</label>
+                                    <select id="kabupaten" name="kabupaten" class="form-control custom-select" disabled>
+                                        <option selected>-- Pilih Kabupaten/Kota --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="kecamatan">Kecamatan</label>
+                                    <select id="kecamatan" name="kecamatan" class="form-control custom-select" disabled>
+                                        <option selected>-- Pilih Kecamatan --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="desa">Desa</label>
+                                    <select id="desa" name="desa" class="form-control custom-select" disabled>
+                                        <option selected>-- Pilih Desa --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                {{ form.pekerjaan.label(class="form-control-label") }}
+                                {{ form.pekerjaan(class="form-control custom-select" + (" is-invalid" if form.pekerjaan.errors else "")) }}
+                                {% if form.pekerjaan.errors %}<div class="invalid-feedback">{% for error in form.pekerjaan.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                            </div>
+                            {% if form.dtks %}
+                            <div class="form-group">
+                                {{ form.dtks.label(class="form-control-label") }}
+                                {{ form.dtks(class="form-control custom-select" + (" is-invalid" if form.dtks.errors else "")) }}
+                                {% if form.dtks.errors %}<div class="invalid-feedback">{% for error in form.dtks.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
                             </div>
                             {% endif %}
-                        {% endif %}
-                    {% endfor %}
-                    </div>
-                </fieldset>
+                        </fieldset>
 
-                <fieldset class="mb-4">
-                    <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Tahap 2: Belum Menerima Jaminan Perlindungan Sosial</legend>
-                    <div class="form-row">
-                    {% for kriteria_nama_display in kriteria_list %}
-                        {% if kriteria_nama_display in tahap2_kriteria_names %}
-                            {% set field_name_slug = 'kriteria_' + kriteria_nama_display.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_') %}
-                            {% set field = form[field_name_slug] %}
-                            {% if field %}
-                            <div class="form-group col-md-6 col-lg-4">
-                                {{ field.label(text=kriteria_nama_display, class="form-control-label") }}
-                                {{ field(class="form-control custom-select" + (" is-invalid" if field.errors else "")) }}
-                                {% if field.errors %}<div class="invalid-feedback">{% for error in field.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                        {% if kriteria_list and kriteria_list|length > 0 %}
+                        {% set tahap1_kriteria_names = ['PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya'] %}
+                        {% set tahap2_kriteria_names = ['Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Bekerja', 'Difabel', 'Penyakit Menahun / Kronis', 'Rumah Tangga Tunggal / Lansia'] %}
+
+                        <fieldset class="mb-4">
+                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Tahap 1: Jaminan Perlindungan Sosial</legend>
+                            <p class="text-muted">Pilih "Ya" jika warga sudah menerima salah satu bantuan berikut.</p>
+                            <div class="form-row">
+                            {% for kriteria_nama_display in kriteria_list %}
+                                {% if kriteria_nama_display in tahap1_kriteria_names %}
+                                    {% set field_name_slug = 'kriteria_' + kriteria_nama_display.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_') %}
+                                    {% set field = form[field_name_slug] %}
+                                    {% if field %}
+                                    <div class="form-group col-md-6 col-lg-4">
+                                        {{ field.label(text=kriteria_nama_display, class="form-control-label") }}
+                                        {{ field(class="form-control custom-select" + (" is-invalid" if field.errors else "")) }}
+                                        {% if field.errors %}<div class="invalid-feedback">{% for error in field.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
                             </div>
-                            {% endif %}
+                        </fieldset>
+
+                        <fieldset class="mb-4">
+                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Tahap 2: Kondisi Khusus</legend>
+                            <p class="text-muted">Pilih "Ya" jika warga memenuhi salah satu kondisi berikut dan <strong>belum</strong> menerima bantuan pada Tahap 1.</p>
+                            <div class="form-row">
+                            {% for kriteria_nama_display in kriteria_list %}
+                                {% if kriteria_nama_display in tahap2_kriteria_names %}
+                                    {% set field_name_slug = 'kriteria_' + kriteria_nama_display.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_') %}
+                                    {% set field = form[field_name_slug] %}
+                                    {% if field %}
+                                    <div class="form-group col-md-6 col-lg-4">
+                                        {{ field.label(text=kriteria_nama_display, class="form-control-label") }}
+                                        {{ field(class="form-control custom-select" + (" is-invalid" if field.errors else "")) }}
+                                        {% if field.errors %}<div class="invalid-feedback">{% for error in field.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            </div>
+                        </fieldset>
                         {% endif %}
-                    {% endfor %}
-                    </div>
-                </fieldset>
-                {% endif %}
 
-                {# Bagian Kriteria Penilaian yang lama dihapus dan digantikan dengan dua fieldset di atas.
-                   Jika ada kriteria yang tidak masuk ke salah satu dari dua tahap di atas tapi masih ada di kriteria_list,
-                   Anda mungkin perlu menambahkannya ke salah satu tahap atau membuat tahap/bagian baru.
-                   Berdasarkan SEMUA_KRITERIA_FORM saat ini, semua kriteria sudah tercover.
-                #}
-
-
-
-
-
-                {% if form.dokumen_pendukung %}
-                <fieldset class="mb-4">
-                    <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Unggah Dokumen Pendukung</legend>
-                    <div class="form-group">
-                        {{ form.dokumen_pendukung.label(class="form-control-label") }}
-                        <div class="custom-file">
-                            {{ form.dokumen_pendukung(class="custom-file-input" + (" is-invalid" if form.dokumen_pendukung.errors else "")) }}
-                            <label class="custom-file-label" for="{{ form.dokumen_pendukung.id }}">Pilih file...</label>
-                            {% if form.dokumen_pendukung.errors %}<div class="invalid-feedback d-block">{% for error in form.dokumen_pendukung.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                        {% if form.dokumen_pendukung %}
+                        <fieldset class="mb-4">
+                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Unggah Dokumen Pendukung</legend>
+                            <div class="form-group">
+                                {{ form.dokumen_pendukung.label(class="form-control-label") }}
+                                <div class="custom-file">
+                                    {{ form.dokumen_pendukung(class="custom-file-input" + (" is-invalid" if form.dokumen_pendukung.errors else "")) }}
+                                    <label class="custom-file-label" for="{{ form.dokumen_pendukung.id }}">Pilih file...</label>
+                                    {% if form.dokumen_pendukung.errors %}<div class="invalid-feedback d-block">{% for error in form.dokumen_pendukung.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                                </div>
+                                <small class="form-text text-muted">Opsional. Format yang diizinkan: PDF, JPG, PNG. Maksimum 2MB.</small>
+                            </div>
+                        </fieldset>
+                        {% endif %}
+                        <hr>
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('petugas.list_penerima') }}" class="btn btn-secondary mr-2">Batal</a>
+                            {{ form.submit(class="btn btn-success") }}
                         </div>
-                        <small class="form-text text-muted">Opsional. Format yang diizinkan: PDF, JPG, PNG. Maksimum 2MB.</small>
-                    </div>
-                </fieldset>
-                {% endif %}
-                <hr>
-                {{ form.submit(class="btn btn-primary btn-lg") }}
-                <a href="{{ url_for('petugas.list_penerima') }}" class="btn btn-secondary btn-lg ml-2">Batal</a>
-            </form>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     // Script untuk menampilkan nama file pada input file custom Bootstrap
     $('.custom-file-input').on('change', function(event) {
         var inputFile = event.target;
-        var fileName = inputFile.files[0].name;
-        $(inputFile).next('.custom-file-label').html(fileName);
+        if (inputFile.files.length > 0) {
+            var fileName = inputFile.files[0].name;
+            $(inputFile).next('.custom-file-label').html(fileName);
+        } else {
+            $(inputFile).next('.custom-file-label').html('Pilih file...');
+        }
+    });
+
+    // Script untuk dropdown wilayah
+    document.addEventListener('DOMContentLoaded', function () {
+        const provinsiSelect = document.getElementById('provinsi');
+        const kabupatenSelect = document.getElementById('kabupaten');
+        const kecamatanSelect = document.getElementById('kecamatan');
+        const desaSelect = document.getElementById('desa');
+
+        const apiBaseUrl = 'https://www.emsifa.com/api-wilayah-indonesia/api/';
+
+        function resetSelect(select, defaultText) {
+            select.innerHTML = `<option selected>-- ${defaultText} --</option>`;
+            select.disabled = true;
+        }
+
+        // Fetch and populate provinsi
+        fetch(apiBaseUrl + 'provinces.json')
+            .then(response => response.json())
+            .then(provinces => {
+                provinces.forEach(provinsi => {
+                    const option = document.createElement('option');
+                    option.value = provinsi.id;
+                    option.textContent = provinsi.name;
+                    provinsiSelect.appendChild(option);
+                });
+            });
+
+        provinsiSelect.addEventListener('change', function () {
+            const provinsiId = this.value;
+            resetSelect(kabupatenSelect, 'Pilih Kabupaten/Kota');
+            resetSelect(kecamatanSelect, 'Pilih Kecamatan');
+            resetSelect(desaSelect, 'Pilih Desa');
+
+            if (provinsiId) {
+                kabupatenSelect.disabled = false;
+                fetch(apiBaseUrl + `regencies/${provinsiId}.json`)
+                    .then(response => response.json())
+                    .then(regencies => {
+                        regencies.forEach(kabupaten => {
+                            const option = document.createElement('option');
+                            option.value = kabupaten.id;
+                            option.textContent = kabupaten.name;
+                            kabupatenSelect.appendChild(option);
+                        });
+                    });
+            }
+        });
+
+        kabupatenSelect.addEventListener('change', function () {
+            const kabupatenId = this.value;
+            resetSelect(kecamatanSelect, 'Pilih Kecamatan');
+            resetSelect(desaSelect, 'Pilih Desa');
+
+            if (kabupatenId) {
+                kecamatanSelect.disabled = false;
+                fetch(apiBaseUrl + `districts/${kabupatenId}.json`)
+                    .then(response => response.json())
+                    .then(districts => {
+                        districts.forEach(kecamatan => {
+                            const option = document.createElement('option');
+                            option.value = kecamatan.id;
+                            option.textContent = kecamatan.name;
+                            kecamatanSelect.appendChild(option);
+                        });
+                    });
+            }
+        });
+
+        kecamatanSelect.addEventListener('change', function () {
+            const kecamatanId = this.value;
+            resetSelect(desaSelect, 'Pilih Desa');
+
+            if (kecamatanId) {
+                desaSelect.disabled = false;
+                fetch(apiBaseUrl + `villages/${kecamatanId}.json`)
+                    .then(response => response.json())
+                    .then(villages => {
+                        villages.forEach(desa => {
+                            const option = document.createElement('option');
+                            option.value = desa.id;
+                            option.textContent = desa.name;
+                            desaSelect.appendChild(option);
+                        });
+                    });
+            }
+        });
     });
 </script>
 {% endblock %}
