@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager  # Akan diaktifkan nanti
 from flask_wtf.csrf import CSRFProtect # Tambahkan impor ini
 from config import Config
-from app.utils.model_handler import load_and_preprocess_data, MODEL_PATH, DATASET_PATH
+
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -25,23 +25,18 @@ def create_app(config_class=Config):
     csrf.init_app(app) # Inisialisasi CSRFProtect dengan aplikasi
 
     with app.app_context():
-        # Load model and dataset once
+        # Load model once
         try:
-            if os.path.exists(MODEL_PATH):
-                app.extensions['knn_model'] = joblib.load(MODEL_PATH)
+            model_path = os.path.join(os.path.dirname(__file__), 'models', 'knn_model.pkl')
+            if os.path.exists(model_path):
+                app.extensions['knn_model'] = joblib.load(model_path)
                 app.logger.info("Model KNN berhasil dimuat saat aplikasi dimulai.")
             else:
                 app.extensions['knn_model'] = None
-                app.logger.error(f"Model KNN tidak ditemukan di {MODEL_PATH} saat aplikasi dimulai.")
+                app.logger.error(f"Model KNN tidak ditemukan di {model_path} saat aplikasi dimulai.")
         except Exception as e:
             app.extensions['knn_model'] = None
             app.logger.error(f"Error memuat model KNN saat aplikasi dimulai: {str(e)}")
-
-        app.extensions['df_original'] = load_and_preprocess_data(DATASET_PATH)
-        if app.extensions['df_original'].empty:
-            app.logger.error("Dataset original gagal dimuat atau kosong saat aplikasi dimulai.")
-        else:
-            app.logger.info("Dataset original berhasil dimuat saat aplikasi dimulai.")
 
     # Impor dan daftarkan Blueprint di sini
     from app.routes.auth_routes import auth_bp

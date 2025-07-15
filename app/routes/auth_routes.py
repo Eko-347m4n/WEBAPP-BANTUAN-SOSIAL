@@ -12,7 +12,6 @@ def index():
     form = PrediksiForm()
     prediction_data = None
     knn_model = current_app.extensions.get('knn_model')
-    df_original = current_app.extensions.get('df_original')
 
     if form.validate_on_submit():
         nama = form.nama.data
@@ -23,10 +22,8 @@ def index():
 
         if knn_model is None:
             flash("Model prediksi tidak tersedia atau gagal dimuat. Silakan hubungi admin.", "danger")
-        elif df_original is None or df_original.empty:
-            flash("Data referensi untuk prediksi tidak tersedia atau gagal dimuat. Silakan hubungi admin.", "danger")
         else:
-            prediction_result = predict_individual_status(nama, df_original, knn_model, passing_grade)
+            prediction_result = predict_individual_status(nama, db.session, knn_model, passing_grade)
             if "error" in prediction_result:
                 flash(prediction_result["error"], "warning")
             else:

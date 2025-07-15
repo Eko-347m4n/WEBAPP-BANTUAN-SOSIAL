@@ -61,32 +61,28 @@ class PenerimaForm(FlaskForm):
         ('Nelayan', 'Nelayan'),
         ('Lainnya', 'Lainnya')
     ], validators=[DataRequired()])
-    dtks = SelectField('Status DTKS', choices=[
-        ('', '-- Pilih Status DTKS --'),
-        ('Ya', 'Terdaftar'),
-        ('Tidak', 'Tidak Terdaftar')
-    ], validators=[DataRequired()])
     dokumen_pendukung = FileField('Dokumen Pendukung', validators=[FileAllowed(['jpg', 'png', 'pdf'], 'Hanya gambar dan PDF!')])
+
+    # --- KRITERIA ---
+    # Menggunakan SelectField untuk merepresentasikan Boolean. Akan dikonversi di route.
+    # 'True' dan 'False' sebagai string akan dievaluasi dengan benar di Python.
+    boolean_choices = [('True', 'Ya'), ('False', 'Tidak')]
+
+    # Status DTKS
+    dtks = SelectField('Terdaftar di DTKS?', choices=boolean_choices, validators=[DataRequired()])
+
+    # Kriteria Penambah Skor
+    keluarga_miskin_ekstrem = SelectField('Keluarga Miskin Ekstrem?', choices=boolean_choices, validators=[DataRequired()])
+    kehilangan_mata_pencaharian = SelectField('Kehilangan Mata Pencaharian?', choices=boolean_choices, validators=[DataRequired()])
+    tidak_bekerja = SelectField('Tidak Bekerja?', choices=boolean_choices, validators=[DataRequired()])
+    difabel = SelectField('Difabel?', choices=boolean_choices, validators=[DataRequired()])
+    penyakit_kronis = SelectField('Penyakit Kronis?', choices=boolean_choices, validators=[DataRequired()])
+    rumah_tangga_tunggal_lansia = SelectField('Rumah Tangga Tunggal / Lansia?', choices=boolean_choices, validators=[DataRequired()])
+
+    # Kriteria Pengurang Skor
+    pkh = SelectField('Menerima PKH?', choices=boolean_choices, validators=[DataRequired()])
+    kartu_pra_kerja = SelectField('Menerima Kartu Pra Kerja?', choices=boolean_choices, validators=[DataRequired()])
+    bst = SelectField('Menerima BST?', choices=boolean_choices, validators=[DataRequired()])
+    bansos_lainnya = SelectField('Menerima Bansos Pemerintah Lainnya?', choices=boolean_choices, validators=[DataRequired()])
+
     submit = SubmitField('Simpan Data Penerima')
-
-# Anda bisa mendefinisikan SEMUA_KRITERIA_FORM di sini atau di config
-SEMUA_KRITERIA_FORM = [
-    'Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Bekerja',
-    'Difabel', 'Penyakit Menahun / Kronis', 'Rumah Tangga Tunggal / Lansia',
-    'PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya'
-]
-
-# Konstanta untuk membantu pengelolaan field kriteria dinamis di routes
-TAHAP1_KRITERIA_NAMES = ['PKH', 'Kartu Pra Kerja', 'BST', 'Bansos Pemerintah Lainnya']
-TAHAP2_KRITERIA_NAMES = [
-    'Keluarga Miskin Ekstrem', 'Kehilangan Mata Pencaharian', 'Tidak Bekerja',
-    'Difabel', 'Penyakit Menahun / Kronis', 'Rumah Tangga Tunggal / Lansia'
-]
-
-# Pilihan default
-KRITERIA_CHOICES_DEFAULT_STYLE = [
-    ('Ya', 'Ya'),
-    ('Tidak', 'Tidak')
-]
-
-DEFAULT_KRITERIA_PROMPT = ('', '-- Pilih Status --')

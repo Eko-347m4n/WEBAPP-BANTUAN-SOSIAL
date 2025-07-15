@@ -1,48 +1,22 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
-from flask_login import login_required, current_user
+from flask_login import login_required
 from app import db
-from app.database.models import Penerima, KriteriaPenerima, Setting
-from app.forms import (
-    PenerimaForm, SEMUA_KRITERIA_FORM, PrediksiForm, SettingForm,
-    TAHAP1_KRITERIA_NAMES,
-    KRITERIA_CHOICES_DEFAULT_STYLE, DEFAULT_KRITERIA_PROMPT)
-from app.utils.model_handler import load_and_preprocess_data, predict_individual_status
+from app.database.models import Penerima, Setting
+from app.forms import PenerimaForm, PrediksiForm, SettingForm
+from app.utils.model_handler import predict_individual_status
 from werkzeug.utils import secure_filename
-from wtforms import SelectField
-from wtforms.validators import DataRequired
 import os
 import joblib
 
 petugas_bp = Blueprint('petugas', __name__, url_prefix='/petugas')
 
-# Helper function to create form class dynamically
-def get_dynamic_penerima_form_class(base_class, kriteria_names_list,
-                                    tahap1_names, tahap1_choices,
-                                    default_choices, default_prompt):
-    """Creates a new form class inheriting from base_class with dynamic kriteria fields."""
-    class DynamicPenerimaForm(base_class):
-        pass
-
-    for kriteria_nama in kriteria_names_list:
-        field_name_slug = 'kriteria_' + kriteria_nama.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
-        
-        current_field_choices_style = default_choices
-        if kriteria_nama in tahap1_names:
-            current_field_choices_style = tahap1_choices
-        
-        # Add the prompt as the first option
-        final_choices = [default_prompt] + current_field_choices_style
-        
-        # Define field as a class attribute (UnboundField)
-        field = SelectField(kriteria_nama, choices=final_choices, validators=[DataRequired(message=f"{kriteria_nama} harus diisi.")])
-        setattr(DynamicPenerimaForm, field_name_slug, field)
-    
-    return DynamicPenerimaForm
+def str_to_bool(s):
+    """Converts a string to a boolean."""
+    return s.lower() in ['true', 't', 'yes', '1']
 
 @petugas_bp.route('/dashboard')
 @login_required
 def dashboard():
-    # Pastikan hanya petugas yang bisa akses, bisa ditambahkan pengecekan role jika ada
     return render_template('/petugas/dashboard.html', title='Dashboard Petugas')
 
 @petugas_bp.route('/prediksi', methods=['GET', 'POST'])
@@ -50,25 +24,14 @@ def dashboard():
 def prediksi():
     form = PrediksiForm()
     prediction = None
-
-    # Load settings from DB
     setting = Setting.query.first()
     if not setting:
-        # Create default setting if none exists
         setting = Setting(passing_grade=10, kuota=50)
         db.session.add(setting)
         db.session.commit()
 
     if form.validate_on_submit():
         nama = form.nama.data
-
-        # Load dataset
-        df = load_and_preprocess_data()
-        if df.empty:
-            flash('Gagal memuat data untuk prediksi.', 'danger')
-            return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form)
-
-        # Load KNN model
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
         try:
             knn_model = joblib.load(model_path)
@@ -77,9 +40,7 @@ def prediksi():
             return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form)
 
         passing_grade = setting.passing_grade
-
-        # Call prediction function
-        prediction = predict_individual_status(nama, df, knn_model, passing_grade)
+        prediction = predict_individual_status(nama, db.session, knn_model, passing_grade)
 
         if 'error' in prediction:
             flash(prediction['error'], 'danger')
@@ -100,31 +61,17 @@ def settings():
     if form.validate_on_submit():
         setting.passing_grade = form.passing_grade.data
         setting.kuota = form.kuota.data
-        try:
-            db.session.commit()
-            flash('Pengaturan berhasil disimpan.', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Gagal menyimpan pengaturan: {str(e)}', 'danger')
-
-    # Pre-fill form with current settings
+        db.session.commit()
+        flash('Pengaturan berhasil disimpan.', 'success')
+    
     form.passing_grade.data = setting.passing_grade
     form.kuota.data = setting.kuota
-
     return render_template('petugas/form_setting.html', title='Pengaturan Kuota dan Passing Grade', form=form)
 
 @petugas_bp.route('/tambah_penerima', methods=['GET', 'POST'])
 @login_required
 def tambah_penerima():
-    ActualPenerimaForm = get_dynamic_penerima_form_class(
-        PenerimaForm, SEMUA_KRITERIA_FORM,
-        TAHAP1_KRITERIA_NAMES,
-        KRITERIA_CHOICES_DEFAULT_STYLE,
-        KRITERIA_CHOICES_DEFAULT_STYLE,
-        DEFAULT_KRITERIA_PROMPT)
-    
-    form = ActualPenerimaForm()
-
+    form = PenerimaForm()
     if form.validate_on_submit():
         penerima = Penerima(
             nama=form.nama.data,
@@ -133,54 +80,93 @@ def tambah_penerima():
             kecamatan=request.form.get('kecamatan'),
             desa=request.form.get('desa'),
             pekerjaan=form.pekerjaan.data,
-            dtks=form.dtks.data if hasattr(form, 'dtks') and form.dtks.data else None 
+            dtks=str_to_bool(form.dtks.data),
+            keluarga_miskin_ekstrem=str_to_bool(form.keluarga_miskin_ekstrem.data),
+            kehilangan_mata_pencaharian=str_to_bool(form.kehilangan_mata_pencaharian.data),
+            tidak_bekerja=str_to_bool(form.tidak_bekerja.data),
+            difabel=str_to_bool(form.difabel.data),
+            penyakit_kronis=str_to_bool(form.penyakit_kronis.data),
+            rumah_tangga_tunggal_lansia=str_to_bool(form.rumah_tangga_tunggal_lansia.data),
+            pkh=str_to_bool(form.pkh.data),
+            kartu_pra_kerja=str_to_bool(form.kartu_pra_kerja.data),
+            bst=str_to_bool(form.bst.data),
+            bansos_lainnya=str_to_bool(form.bansos_lainnya.data)
         )
+
+        if form.dokumen_pendukung.data:
+            file = form.dokumen_pendukung.data
+            filename = secure_filename(file.filename)
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
+            file_path = os.path.join(upload_folder, filename)
+            file.save(file_path)
+            penerima.dokumen_pendukung_path = file_path
+
         db.session.add(penerima)
+        db.session.commit()
+        flash('Data penerima berhasil ditambahkan!', 'success')
+        return redirect(url_for('petugas.list_penerima'))
         
-        try:
-            db.session.flush()
-
-            for kriteria_nama in SEMUA_KRITERIA_FORM:
-                field_name_slug = 'kriteria_' + kriteria_nama.lower().replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
-                nilai_kriteria_form = getattr(form, field_name_slug).data
-                kriteria_entry = KriteriaPenerima(
-                    penerima_id=penerima.id,
-                    nama_kriteria=kriteria_nama,
-                    nilai_kriteria=nilai_kriteria_form
-                )
-                db.session.add(kriteria_entry)
-
-            if hasattr(form, 'dokumen_pendukung') and form.dokumen_pendukung.data:
-                file = form.dokumen_pendukung.data
-                if file:
-                    filename = secure_filename(file.filename)
-                    upload_folder_config = current_app.config.get('UPLOAD_FOLDER', 'uploads')
-                    if not os.path.isabs(upload_folder_config):
-                        upload_folder = os.path.join(current_app.root_path, upload_folder_config)
-                    else:
-                        upload_folder = upload_folder_config
-                    
-                    os.makedirs(upload_folder, exist_ok=True)
-                    file_path = os.path.join(upload_folder, filename)
-                    file.save(file_path)
-                    penerima.dokumen_pendukung_path = file_path
-
-            db.session.commit()
-            flash('Data penerima berhasil ditambahkan!', 'success')
-            return redirect(url_for('petugas.list_penerima'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Terjadi kesalahan saat menyimpan data: {str(e)}', 'danger')
-            current_app.logger.error(f"Error saving new penerima: {e}", exc_info=True)
-
-    return render_template('petugas/form_input_data.html', title='Input Data Penerima Baru', form=form, kriteria_list=SEMUA_KRITERIA_FORM)
+    return render_template('petugas/form_input_data.html', title='Input Data Penerima Baru', form=form)
 
 @petugas_bp.route('/list_penerima')
 @login_required
 def list_penerima():
-    try:
-        all_penerima = Penerima.query.all()
-        return render_template('petugas/list_penerima.html', title='Daftar Penerima Bantuan', penerima_list=all_penerima)
-    except Exception as e:
-        flash(f'Gagal memuat daftar penerima: {str(e)}', 'danger')
-        return render_template('petugas/list_penerima.html', title='Daftar Penerima Bantuan', penerima_list=[])
+    all_penerima = Penerima.query.all()
+    return render_template('petugas/list_penerima.html', title='Daftar Penerima Bantuan', penerima_list=all_penerima)
+
+@petugas_bp.route('/edit_penerima/<int:penerima_id>', methods=['GET', 'POST'])
+@login_required
+def edit_penerima(penerima_id):
+    penerima = Penerima.query.get_or_404(penerima_id)
+    form = PenerimaForm(obj=penerima)
+
+    if form.validate_on_submit():
+        form.populate_obj(penerima)
+        # Handle boolean conversion from form
+        penerima.dtks = str_to_bool(form.dtks.data)
+        penerima.keluarga_miskin_ekstrem = str_to_bool(form.keluarga_miskin_ekstrem.data)
+        penerima.kehilangan_mata_pencaharian = str_to_bool(form.kehilangan_mata_pencaharian.data)
+        penerima.tidak_bekerja = str_to_bool(form.tidak_bekerja.data)
+        penerima.difabel = str_to_bool(form.difabel.data)
+        penerima.penyakit_kronis = str_to_bool(form.penyakit_kronis.data)
+        penerima.rumah_tangga_tunggal_lansia = str_to_bool(form.rumah_tangga_tunggal_lansia.data)
+        penerima.pkh = str_to_bool(form.pkh.data)
+        penerima.kartu_pra_kerja = str_to_bool(form.kartu_pra_kerja.data)
+        penerima.bst = str_to_bool(form.bst.data)
+        penerima.bansos_lainnya = str_to_bool(form.bansos_lainnya.data)
+        
+        if form.dokumen_pendukung.data:
+            file = form.dokumen_pendukung.data
+            filename = secure_filename(file.filename)
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            file_path = os.path.join(upload_folder, filename)
+            file.save(file_path)
+            penerima.dokumen_pendukung_path = file_path
+
+        db.session.commit()
+        flash('Data penerima berhasil diperbarui!', 'success')
+        return redirect(url_for('petugas.list_penerima'))
+
+    # Pre-populate form with boolean as string for SelectField
+    form.dtks.data = str(penerima.dtks)
+    form.keluarga_miskin_ekstrem.data = str(penerima.keluarga_miskin_ekstrem)
+    form.kehilangan_mata_pencaharian.data = str(penerima.kehilangan_mata_pencaharian)
+    form.tidak_bekerja.data = str(penerima.tidak_bekerja)
+    form.difabel.data = str(penerima.difabel)
+    form.penyakit_kronis.data = str(penerima.penyakit_kronis)
+    form.rumah_tangga_tunggal_lansia.data = str(penerima.rumah_tangga_tunggal_lansia)
+    form.pkh.data = str(penerima.pkh)
+    form.kartu_pra_kerja.data = str(penerima.kartu_pra_kerja)
+    form.bst.data = str(penerima.bst)
+    form.bansos_lainnya.data = str(penerima.bansos_lainnya)
+
+    return render_template('petugas/form_input_data.html', title='Edit Data Penerima', form=form, is_edit=True)
+
+@petugas_bp.route('/hapus_penerima/<int:penerima_id>', methods=['POST'])
+@login_required
+def hapus_penerima(penerima_id):
+    penerima = Penerima.query.get_or_404(penerima_id)
+    db.session.delete(penerima)
+    db.session.commit()
+    flash('Data penerima berhasil dihapus.', 'success')
+    return redirect(url_for('petugas.list_penerima'))

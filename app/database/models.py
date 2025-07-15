@@ -30,8 +30,7 @@ class Setting(db.Model):
     def __repr__(self):
         return f'<Setting passing_grade={self.passing_grade} kuota={self.kuota}>'
 
-# Model untuk data penerima (sesuai penggunaan di petugas_routes.py)
-# Disesuaikan dengan form di index.html
+# Model untuk data penerima (Struktur Flat)
 class Penerima(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nama = db.Column(db.String(150), nullable=False, index=True)
@@ -40,20 +39,28 @@ class Penerima(db.Model):
     kecamatan = db.Column(db.String(100), nullable=True)
     desa = db.Column(db.String(100), nullable=True)
     pekerjaan = db.Column(db.String(100), nullable=True)
-    dtks = db.Column(db.String(10), nullable=True)
     dokumen_pendukung_path = db.Column(db.String(255), nullable=True)
 
-    # Relasi ke kriteria
-    kriteria = db.relationship('KriteriaPenerima', backref='penerima', lazy='dynamic', cascade="all, delete-orphan")
+    # --- KRITERIA ---
+    # Menggunakan Boolean untuk efisiensi dan integritas data.
+    # Nilai default False berarti kriteria tidak terpenuhi.
+    
+    # Status DTKS
+    dtks = db.Column(db.Boolean, default=False, nullable=False, index=True)
+
+    # Kriteria Penambah Skor
+    keluarga_miskin_ekstrem = db.Column(db.Boolean, default=False, nullable=False)
+    kehilangan_mata_pencaharian = db.Column(db.Boolean, default=False, nullable=False)
+    tidak_bekerja = db.Column(db.Boolean, default=False, nullable=False)
+    difabel = db.Column(db.Boolean, default=False, nullable=False)
+    penyakit_kronis = db.Column(db.Boolean, default=False, nullable=False)
+    rumah_tangga_tunggal_lansia = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Kriteria Pengurang Skor
+    pkh = db.Column(db.Boolean, default=False, nullable=False)
+    kartu_pra_kerja = db.Column(db.Boolean, default=False, nullable=False)
+    bst = db.Column(db.Boolean, default=False, nullable=False)
+    bansos_lainnya = db.Column(db.Boolean, default=False, nullable=False)
 
     def __repr__(self):
         return f'<Penerima {self.nama}>'
-
-class KriteriaPenerima(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    penerima_id = db.Column(db.Integer, db.ForeignKey('penerima.id'), nullable=False)
-    nama_kriteria = db.Column(db.String(100), nullable=False)
-    nilai_kriteria = db.Column(db.String(10), nullable=False)
-
-    def __repr__(self):
-        return f'<KriteriaPenerima {self.penerima_id} - {self.nama_kriteria}: {self.nilai_kriteria}>'
