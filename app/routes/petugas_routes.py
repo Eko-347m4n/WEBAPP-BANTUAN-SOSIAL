@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required
 from app import db
 from app.database.models import Penerima, Setting
-from app.forms import PenerimaForm, PrediksiForm, SettingForm
+from app.forms import PenerimaForm, IndexPredictionForm, SettingForm, MassPredictionForm
 from app.utils.model_handler import predict_individual_status
 from werkzeug.utils import secure_filename
 import os
@@ -22,7 +22,7 @@ def dashboard():
 @petugas_bp.route('/prediksi', methods=['GET', 'POST'])
 @login_required
 def prediksi():
-    form = PrediksiForm()
+    form = IndexPredictionForm()
     prediction = None
     setting = Setting.query.first()
     if not setting:
@@ -40,13 +40,76 @@ def prediksi():
             return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form)
 
         passing_grade = setting.passing_grade
-        prediction = predict_individual_status(nama, db.session, knn_model, passing_grade)
+        prediction = predict_individual_status(nama=nama, db_session=db.session, knn_model=knn_model, passing_grade=passing_grade)
 
         if 'error' in prediction:
             flash(prediction['error'], 'danger')
             prediction = None
 
     return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form, prediction=prediction, setting=setting)
+
+@petugas_bp.route('/mass_predict', methods=['GET', 'POST'])
+@login_required
+def mass_predict():
+    form = MassPredictionForm()
+    results = None
+    if form.validate_on_submit():
+        # Load the KNN model
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
+        try:
+            knn_model = joblib.load(model_path)
+        except Exception as e:
+            flash(f'Gagal memuat model prediksi: {str(e)}', 'danger')
+            return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form)
+
+        # Get passing grade from settings
+        setting = Setting.query.first()
+        if not setting:
+            flash('Pengaturan passing grade belum ditentukan. Harap atur di Pengaturan Sistem.', 'danger')
+            return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form)
+        
+        passing_grade = setting.passing_grade
+
+        # Perform mass prediction
+        all_penerima = Penerima.query.all()
+        total_processed = len(all_penerima)
+        total_updated = 0
+
+        for penerima in all_penerima:
+            prediction_result = predict_individual_status(penerima.nama, db.session, knn_model, passing_grade, penerima_obj=penerima)
+            if 'error' not in prediction_result:
+                # Update penerima status in database
+                penerima.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
+                penerima.skor_saw_ternormalisasi = prediction_result['skor_saw_ternormalisasi']
+                db.session.add(penerima)
+                total_updated += 1
+            else:
+                current_app.logger.warning(f"Failed to predict for {penerima.nama}: {prediction_result['error']}")
+        
+        db.session.commit()
+        flash(f'Prediksi massal selesai. {total_updated} dari {total_processed} data penerima diperbarui.', 'success')
+        results = {'total_processed': total_processed, 'total_updated': total_updated}
+
+    return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form, results=results)
+
+@petugas_bp.route('/eligible_recipients')
+@login_required
+def eligible_recipients():
+    setting = Setting.query.first()
+    if not setting:
+        flash('Pengaturan passing grade dan kuota belum ditentukan. Harap atur di Pengaturan Sistem.', 'danger')
+        return redirect(url_for('petugas.settings'))
+
+    passing_grade = setting.passing_grade
+    kuota = setting.kuota
+
+    # Fetch eligible recipients based on KNN status and SAW score
+    eligible_list = Penerima.query.filter(
+        Penerima.status_kelayakan_knn == 'Layak',
+        Penerima.skor_saw_ternormalisasi >= passing_grade
+    ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
+
+    return render_template('petugas/eligible_recipients.html', title='Daftar Penerima Layak', eligible_list=eligible_list, passing_grade=passing_grade, kuota=kuota)
 
 @petugas_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
@@ -112,7 +175,7 @@ def tambah_penerima():
 @login_required
 def list_penerima():
     all_penerima = Penerima.query.all()
-    return render_template('petugas/list_penerima.html', title='Daftar Penerima Bantuan', penerima_list=all_penerima)
+    return render_template('petugas/list_penerima.html', title='Rakyat Negara', penerima_list=all_penerima)
 
 @petugas_bp.route('/edit_penerima/<int:penerima_id>', methods=['GET', 'POST'])
 @login_required
@@ -121,7 +184,20 @@ def edit_penerima(penerima_id):
     form = PenerimaForm(obj=penerima)
 
     if form.validate_on_submit():
+        # Store original location data
+        original_provinsi = penerima.provinsi
+        original_kabupaten = penerima.kabupaten
+        original_kecamatan = penerima.kecamatan
+        original_desa = penerima.desa
+
         form.populate_obj(penerima)
+
+        # Restore original location data to prevent changes
+        penerima.provinsi = original_provinsi
+        penerima.kabupaten = original_kabupaten
+        penerima.kecamatan = original_kecamatan
+        penerima.desa = original_desa
+
         # Handle boolean conversion from form
         penerima.dtks = str_to_bool(form.dtks.data)
         penerima.keluarga_miskin_ekstrem = str_to_bool(form.keluarga_miskin_ekstrem.data)

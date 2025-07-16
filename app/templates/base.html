@@ -40,7 +40,7 @@
                                 <li class="nav-item {% if request.endpoint == 'petugas.dashboard' %}active{% endif %}"><a class="nav-link" href="{{ url_for('petugas.dashboard') }}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                                 <li class="nav-item {% if request.endpoint == 'petugas.tambah_penerima' %}active{% endif %}"><a class="nav-link" href="{{ url_for('petugas.tambah_penerima') }}"><i class="fas fa-user-plus"></i> Input Data Warga</a></li>
                                 <li class="nav-item {% if request.endpoint == 'petugas.list_penerima' %}active{% endif %}"><a class="nav-link" href="{{ url_for('petugas.list_penerima') }}"><i class="fas fa-list"></i> Daftar Warga</a></li>
-                                <li class="nav-item {% if request.endpoint == 'petugas.prediksi' %}active{% endif %}"><a class="nav-link" href="{{ url_for('petugas.prediksi') }}"><i class="fas fa-brain"></i> Prediksi Kelayakan</a></li>
+                                
                                 <li class="nav-item {% if request.endpoint == 'petugas.settings' %}active{% endif %}"><a class="nav-link" href="{{ url_for('petugas.settings') }}"><i class="fas fa-sliders-h"></i> Pengaturan Kuota/Grade</a></li>
                             {% endif %}
                         {% endif %}

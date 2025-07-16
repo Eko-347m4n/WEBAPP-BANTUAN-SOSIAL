@@ -18,19 +18,19 @@
                             <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Data Diri Penerima</legend>
                             <div class="form-group">
                                 {{ form.nama.label(class="form-control-label") }}
-                                {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), placeholder="Nama Lengkap Sesuai KTP") }}
+                                {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), placeholder="Nama Lengkap Sesuai KTP" + (" readonly" if is_edit else "")) }}
                                 {% if form.nama.errors %}<div class="invalid-feedback">{% for error in form.nama.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
                             </div>
                             <div class="form-row">
                                 <div class="form-group col-md-6">
                                     <label for="provinsi">Provinsi</label>
-                                    <select id="provinsi" name="provinsi" class="form-control custom-select">
+                                    <select id="provinsi" name="provinsi" class="form-control custom-select"{% if is_edit %} disabled{% endif %}>
                                         <option selected>-- Pilih Provinsi --</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-md-6">
                                     <label for="kabupaten">Kabupaten/Kota</label>
-                                    <select id="kabupaten" name="kabupaten" class="form-control custom-select" disabled>
+                                    <select id="kabupaten" name="kabupaten" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
                                         <option selected>-- Pilih Kabupaten/Kota --</option>
                                     </select>
                                 </div>
@@ -38,13 +38,13 @@
                             <div class="form-row">
                                 <div class="form-group col-md-6">
                                     <label for="kecamatan">Kecamatan</label>
-                                    <select id="kecamatan" name="kecamatan" class="form-control custom-select" disabled>
+                                    <select id="kecamatan" name="kecamatan" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
                                         <option selected>-- Pilih Kecamatan --</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-md-6">
                                     <label for="desa">Desa</label>
-                                    <select id="desa" name="desa" class="form-control custom-select" disabled>
+                                    <select id="desa" name="desa" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
                                         <option selected>-- Pilih Desa --</option>
                                     </select>
                                 </div>
@@ -167,7 +167,22 @@
             select.disabled = true;
         }
 
-        // Fetch and populate provinsi
+        async function populateSelect(selectElement, url, selectedId = null) {
+            const response = await fetch(url);
+            const data = await response.json();
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                if (selectedId && String(item.id) === String(selectedId)) {
+                    option.selected = true;
+                }
+                selectElement.appendChild(option);
+            });
+            selectElement.disabled = false;
+        }
+
+        // Initial population for provinsi
         fetch(apiBaseUrl + 'provinces.json')
             .then(response => response.json())
             .then(provinces => {
@@ -177,65 +192,57 @@
                     option.textContent = provinsi.name;
                     provinsiSelect.appendChild(option);
                 });
+
+                // If in edit mode, pre-select and disable
+                {% if is_edit and penerima %}
+                    provinsiSelect.value = "{{ penerima.provinsi }}";
+                    provinsiSelect.disabled = true;
+                    // Populate next level
+                    populateSelect(kabupatenSelect, apiBaseUrl + `regencies/{{ penerima.provinsi }}.json`, "{{ penerima.kabupaten }}")
+                        .then(() => {
+                            kabupatenSelect.disabled = true;
+                            return populateSelect(kecamatanSelect, apiBaseUrl + `districts/{{ penerima.kabupaten }}.json`, "{{ penerima.kecamatan }}");
+                        })
+                        .then(() => {
+                            kecamatanSelect.disabled = true;
+                            return populateSelect(desaSelect, apiBaseUrl + `villages/{{ penerima.kecamatan }}.json`, "{{ penerima.desa }}");
+                        })
+                        .then(() => {
+                            desaSelect.disabled = true;
+                        });
+                {% endif %}
             });
 
         provinsiSelect.addEventListener('change', function () {
+            if ({{ 'true' if is_edit else 'false' }}) return; // Prevent change if in edit mode
             const provinsiId = this.value;
             resetSelect(kabupatenSelect, 'Pilih Kabupaten/Kota');
             resetSelect(kecamatanSelect, 'Pilih Kecamatan');
             resetSelect(desaSelect, 'Pilih Desa');
 
             if (provinsiId) {
-                kabupatenSelect.disabled = false;
-                fetch(apiBaseUrl + `regencies/${provinsiId}.json`)
-                    .then(response => response.json())
-                    .then(regencies => {
-                        regencies.forEach(kabupaten => {
-                            const option = document.createElement('option');
-                            option.value = kabupaten.id;
-                            option.textContent = kabupaten.name;
-                            kabupatenSelect.appendChild(option);
-                        });
-                    });
+                populateSelect(kabupatenSelect, apiBaseUrl + `regencies/${provinsiId}.json`);
             }
         });
 
         kabupatenSelect.addEventListener('change', function () {
+            if ({{ 'true' if is_edit else 'false' }}) return; // Prevent change if in edit mode
             const kabupatenId = this.value;
             resetSelect(kecamatanSelect, 'Pilih Kecamatan');
             resetSelect(desaSelect, 'Pilih Desa');
 
             if (kabupatenId) {
-                kecamatanSelect.disabled = false;
-                fetch(apiBaseUrl + `districts/${kabupatenId}.json`)
-                    .then(response => response.json())
-                    .then(districts => {
-                        districts.forEach(kecamatan => {
-                            const option = document.createElement('option');
-                            option.value = kecamatan.id;
-                            option.textContent = kecamatan.name;
-                            kecamatanSelect.appendChild(option);
-                        });
-                    });
+                populateSelect(kecamatanSelect, apiBaseUrl + `districts/${kabupatenId}.json`);
             }
         });
 
         kecamatanSelect.addEventListener('change', function () {
+            if ({{ 'true' if is_edit else 'false' }}) return; // Prevent change if in edit mode
             const kecamatanId = this.value;
             resetSelect(desaSelect, 'Pilih Desa');
 
             if (kecamatanId) {
-                desaSelect.disabled = false;
-                fetch(apiBaseUrl + `villages/${kecamatanId}.json`)
-                    .then(response => response.json())
-                    .then(villages => {
-                        villages.forEach(desa => {
-                            const option = document.createElement('option');
-                            option.value = desa.id;
-                            option.textContent = desa.name;
-                            desaSelect.appendChild(option);
-                        });
-                    });
+                populateSelect(desaSelect, apiBaseUrl + `villages/${kecamatanId}.json`);
             }
         });
     });

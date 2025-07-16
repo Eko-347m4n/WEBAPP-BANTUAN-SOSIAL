@@ -1,35 +1,62 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app.database.models import User, Setting
 from app import db
-from app.forms import LoginForm, RegistrationForm, PrediksiForm # Tambahkan PrediksiForm
-from app.utils.model_handler import predict_individual_status # Hanya butuh fungsi prediksi
+from app.forms import LoginForm, RegistrationForm, IndexPredictionForm
+from app.utils.model_handler import predict_individual_status
+import os
+import joblib
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/', methods=['GET', 'POST'])
 def index():
-    form = PrediksiForm()
-    prediction_data = None
-    knn_model = current_app.extensions.get('knn_model')
+    form = IndexPredictionForm()
+    prediction = None
+    setting = Setting.query.first()
+    if not setting:
+        setting = Setting(passing_grade=10, kuota=50)
+        db.session.add(setting)
+        db.session.commit()
 
     if form.validate_on_submit():
         nama = form.nama.data
-        
-        setting = Setting.query.first()
-        # Gunakan nilai default jika setting tidak ditemukan di DB
-        passing_grade = setting.passing_grade if setting else 10 
+        provinsi_id = request.form.get('provinsi')
+        kabupaten_id = request.form.get('kabupaten')
+        kecamatan_id = request.form.get('kecamatan')
+        desa_id = request.form.get('desa')
 
-        if knn_model is None:
-            flash("Model prediksi tidak tersedia atau gagal dimuat. Silakan hubungi admin.", "danger")
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
+        try:
+            knn_model = joblib.load(model_path)
+        except Exception as e:
+            flash(f'Gagal memuat model prediksi: {str(e)}', 'danger')
+            return redirect(url_for('auth.index'))
+
+        prediction_result = predict_individual_status(
+            nama=nama,
+            db_session=db.session,
+            knn_model=knn_model,
+            passing_grade=setting.passing_grade,
+            location_data={
+                'provinsi': provinsi_id,
+                'kabupaten': kabupaten_id,
+                'kecamatan': kecamatan_id,
+                'desa': desa_id
+            }
+        )
+
+        if 'error' in prediction_result:
+            flash(prediction_result['error'], 'danger')
         else:
-            prediction_result = predict_individual_status(nama, db.session, knn_model, passing_grade)
-            if "error" in prediction_result:
-                flash(prediction_result["error"], "warning")
-            else:
-                prediction_data = prediction_result
+            session['prediction_data'] = prediction_result
 
-    return render_template('index.html', title='Cek Kelayakan Bantuan Sosial', form=form, prediction=prediction_data)
+        return redirect(url_for('auth.index'))
+
+    if 'prediction_data' in session:
+        prediction = session.pop('prediction_data', None)
+
+    return render_template('index.html', title='Cek Kelayakan Masyarakat', form=form, prediction=prediction)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():

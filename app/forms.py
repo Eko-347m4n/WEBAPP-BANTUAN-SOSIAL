@@ -41,9 +41,12 @@ class EditUserForm(FlaskForm):
     # Role tidak diubah melalui form ini oleh admin, untuk menjaga integritas.
     submit = SubmitField('Update User')
 
-class PrediksiForm(FlaskForm):
+class MassPredictionForm(FlaskForm):
+    submit = SubmitField('Mulai Prediksi Massal')
+
+class IndexPredictionForm(FlaskForm):
     nama = StringField('Nama', validators=[DataRequired(), Length(min=2, max=150)])
-    submit = SubmitField('Prediksi')
+    submit = SubmitField('Cari Data')
 
 class SettingForm(FlaskForm):
     passing_grade = IntegerField('Passing Grade', validators=[DataRequired(), NumberRange(min=0)])

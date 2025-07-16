@@ -7,7 +7,10 @@
     <div class="card shadow-lg border-0">
         <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
             <h3 class="mb-0"><i class="fas fa-list"></i> {{ title }}</h3>
-            <a href="{{ url_for('petugas.tambah_penerima') }}" class="btn btn-success"><i class="fas fa-user-plus"></i> Tambah Penerima Baru</a>
+            <div>
+                <a href="{{ url_for('petugas.mass_predict') }}" class="btn btn-warning mr-2"><i class="fas fa-sync-alt"></i> Prediksi Massal</a>
+                <a href="{{ url_for('petugas.tambah_penerima') }}" class="btn btn-success"><i class="fas fa-user-plus"></i> Tambah Penerima Baru</a>
+            </div>
         </div>
         <div class="card-body">
             {% if penerima_list and penerima_list|length > 0 %}

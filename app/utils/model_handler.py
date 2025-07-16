@@ -41,13 +41,26 @@ def _get_region_name(region_id, endpoint):
 # ===============================
 # 1. Fungsi Prediksi Individu (Hybrid: SAW Score + KNN Prediction)
 # ===============================
-def predict_individual_status(name, db_session, knn_model, passing_grade):
+def predict_individual_status(nama, db_session, knn_model, passing_grade, penerima_obj=None, location_data=None):
     from app.database.models import Penerima
 
-    individu = db_session.query(Penerima).filter_by(nama=name).first()
+    if penerima_obj:
+        individu = penerima_obj
+    else:
+        query = db_session.query(Penerima).filter_by(nama=nama)
+        if location_data:
+            if location_data.get('provinsi') and location_data['provinsi'] != '-- Pilih Provinsi --':
+                query = query.filter_by(provinsi=location_data['provinsi'])
+            if location_data.get('kabupaten') and location_data['kabupaten'] != '-- Pilih Kabupaten/Kota --':
+                query = query.filter_by(kabupaten=location_data['kabupaten'])
+            if location_data.get('kecamatan') and location_data['kecamatan'] != '-- Pilih Kecamatan --':
+                query = query.filter_by(kecamatan=location_data['kecamatan'])
+            if location_data.get('desa') and location_data['desa'] != '-- Pilih Desa --':
+                query = query.filter_by(desa=location_data['desa'])
+        individu = query.first()
 
     if not individu:
-        return {"error": f"Individu dengan nama '{name}' tidak ditemukan."}
+        return {"error": f"Individu dengan nama '{nama}' tidak ditemukan."}
 
     # --- SAW Score Calculation ---
     skor_individu = 0
@@ -79,10 +92,11 @@ def predict_individual_status(name, db_session, knn_model, passing_grade):
         knn_prediction = "Model KNN belum dilatih"
     else:
         try:
-            knn_prediction = knn_model.predict(X_individual)[0]
+            raw_prediction = knn_model.predict(X_individual)[0]
+            knn_prediction = "Layak" if raw_prediction == 1 else "Tidak Layak"
         except Exception as e:
             knn_prediction = f"Error prediksi KNN: {e}"
-            current_app.logger.error(f"Error saat prediksi KNN untuk {name}: {e}")
+            current_app.logger.error(f"Error saat prediksi KNN untuk {nama}: {e}")
 
     # --- Final Result ---
     alasan_detail = {
@@ -102,7 +116,7 @@ def predict_individual_status(name, db_session, knn_model, passing_grade):
     desa_name = _get_region_name(individu.desa, f'villages/{individu.kecamatan}.json')
 
     return {
-        "nama": name,
+        "nama": nama,
         "provinsi": provinsi_name if provinsi_name else individu.provinsi, # Fallback to ID if name not found
         "kabupaten": kabupaten_name if kabupaten_name else individu.kabupaten,
         "kecamatan": kecamatan_name if kecamatan_name else individu.kecamatan,

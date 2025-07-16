@@ -15,18 +15,7 @@
                     <h3 class="mb-0"><i class="fas fa-search-dollar"></i> Cek Kelayakan Bantuan</h3>
                 </div>
                 <div class="card-body p-4">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+                    
 
                     <form method="POST" action="" novalidate>
                         {{ form.hidden_tag() }}
@@ -77,53 +66,62 @@
                     </form>
                 </div>
             </div>
-
-            {% if prediction %}
-            <div class="card shadow-lg border-0 mb-4">
-                <div class="card-header {% if prediction.status_kelayakan_knn == 'Layak' %}bg-success text-white{% elif prediction.status_kelayakan_knn == 'Tidak Layak' %}bg-danger text-white{% else %}bg-warning text-dark{% endif %}">
-                    <h4 class="mb-0 text-center"><i class="fas fa-poll"></i> Hasil Prediksi untuk: <strong>{{ prediction.nama }}</strong></h4>
-                </div>
-                <div class="card-body">
-                    <h5 class="mb-3"><i class="fas fa-map-marker-alt"></i> Informasi Alamat</h5>
-                    <ul class="list-group list-group-flush mb-4">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Provinsi: <span class="font-weight-bold">{{ prediction.provinsi }}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Kabupaten/Kota: <span class="font-weight-bold">{{ prediction.kabupaten }}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Kecamatan: <span class="font-weight-bold">{{ prediction.kecamatan }}</span></li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">Desa: <span class="font-weight-bold">{{ prediction.desa }}</span></li>
-                    </ul>
-                    <hr>
-                    <div class="text-center mb-4">
-                        <h5 class="mb-3">Status Kelayakan (Metode KNN)</h5>
-                        <span class="badge badge-pill p-3 w-50 {% if prediction.status_kelayakan_knn == 'Layak' %}badge-success{% elif prediction.status_kelayakan_knn == 'Tidak Layak' %}badge-danger{% else %}badge-warning{% endif %}">
-                            <h4 class="mb-0 text-white">{{ prediction.status_kelayakan_knn }}</h4>
-                        </span>
-                    </div>
-                    <hr>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-calculator"></i> Detail Skor (Metode SAW)</h6>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">Skor Aktual: <span class="font-weight-bold">{{ prediction.skor_total_saw_aktual | round(3) }}</span></li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">Skor Ternormalisasi: <span class="font-weight-bold">{{ prediction.skor_saw_ternormalisasi | round(3) }}</span></li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">Passing Grade: <span class="font-weight-bold">{{ prediction.passing_grade_digunakan_saw }}</span></li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-info-circle"></i> Faktor Penentu</h6>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">Terdaftar di DTKS: <span class="font-weight-bold">{{ 'Ya' if prediction.alasan.DTKS else 'Tidak' }}</span></li>
-                                {% if prediction.alasan['Faktor Penambah Skor'] %}<li class="list-group-item">Penambah Skor: <span class="font-weight-bold">{{ prediction.alasan['Faktor Penambah Skor'] | join(', ') }}</span></li>{% endif %}
-                                {% if prediction.alasan['Faktor Pengurang Skor'] %}<li class="list-group-item">Pengurang Skor: <span class="font-weight-bold">{{ prediction.alasan['Faktor Pengurang Skor'] | join(', ') }}</span></li>{% endif %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
-{% endblock %}
+
+<!-- Prediction Result Modal -->
+<div class="modal fade" id="predictionModal" tabindex="-1" role="dialog" aria-labelledby="predictionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" id="predictionModalHeader">
+                <h5 class="modal-title" id="predictionModalLabel"><i class="fas fa-poll"></i> Hasil Prediksi untuk: <strong id="predictionNama"></strong></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h5 class="mb-3"><i class="fas fa-map-marker-alt"></i> Informasi Alamat</h5>
+                <ul class="list-group list-group-flush mb-4">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Provinsi: <span class="font-weight-bold" id="predictionProvinsi"></span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Kabupaten/Kota: <span class="font-weight-bold" id="predictionKabupaten"></span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Kecamatan: <span class="font-weight-bold" id="predictionKecamatan"></span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Desa: <span class="font-weight-bold" id="predictionDesa"></span></li>
+                </ul>
+                <hr>
+                <div class="text-center mb-4">
+                    <h5 class="mb-3">Status Kelayakan (Metode KNN)</h5>
+                    <span class="badge badge-pill p-3 w-50" id="predictionStatusBadge">
+                        <h4 class="mb-0 text-white" id="predictionStatus"></h4>
+                    </span>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-calculator"></i> Detail Skor (Metode SAW)</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Skor Aktual: <span class="font-weight-bold" id="predictionSkorAktual"></span></li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Skor Ternormalisasi: <span class="font-weight-bold" id="predictionSkorNormalisasi"></span></li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Passing Grade: <span class="font-weight-bold" id="predictionPassingGrade"></span></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle"></i> Faktor Penentu</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Terdaftar di DTKS: <span class="font-weight-bold" id="predictionDTKS"></span></li>
+                            <li class="list-group-item" id="predictionFaktorPenambahContainer">Penambah Skor: <span class="font-weight-bold" id="predictionFaktorPenambah"></span></li>
+                            <li class="list-group-item" id="predictionFaktorPengurangContainer">Pengurang Skor: <span class="font-weight-bold" id="predictionFaktorPengurang"></span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
 
 {% block scripts %}
 {{ super() }}
@@ -213,7 +211,71 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         }
     });
+
+    // Handle prediction result display in modal
+    const predictionData = JSON.parse('{{ prediction | tojson | safe if prediction else "null" }}');
+
+    if (predictionData) {
+        const predictionModal = document.getElementById('predictionModal');
+        const predictionModalHeader = document.getElementById('predictionModalHeader');
+
+        // Set modal header background based on prediction status
+        predictionModalHeader.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'text-white', 'text-dark');
+        if (predictionData.status_kelayakan_knn === 'Layak') {
+            predictionModalHeader.classList.add('bg-success', 'text-white');
+        } else if (predictionData.status_kelayakan_knn === 'Tidak Layak') {
+            predictionModalHeader.classList.add('bg-danger', 'text-white');
+        } else {
+            predictionModalHeader.classList.add('bg-warning', 'text-dark');
+        }
+
+        document.getElementById('predictionNama').textContent = predictionData.nama;
+        document.getElementById('predictionProvinsi').textContent = predictionData.provinsi;
+        document.getElementById('predictionKabupaten').textContent = predictionData.kabupaten;
+        document.getElementById('predictionKecamatan').textContent = predictionData.kecamatan;
+        document.getElementById('predictionDesa').textContent = predictionData.desa;
+
+        const statusBadge = document.getElementById('predictionStatusBadge');
+        const statusText = document.getElementById('predictionStatus');
+        statusText.textContent = predictionData.status_kelayakan_knn;
+
+        // Remove existing classes and add new one based on status
+        statusBadge.classList.remove('badge-success', 'badge-danger', 'badge-warning');
+        if (predictionData.status_kelayakan_knn === 'Layak') {
+            statusBadge.classList.add('badge-success');
+        } else if (predictionData.status_kelayakan_knn === 'Tidak Layak') {
+            statusBadge.classList.add('badge-danger');
+        } else {
+            statusBadge.classList.add('badge-warning');
+        }
+
+        document.getElementById('predictionSkorAktual').textContent = predictionData.skor_total_saw_aktual.toFixed(3);
+        document.getElementById('predictionSkorNormalisasi').textContent = predictionData.skor_saw_ternormalisasi.toFixed(3);
+        document.getElementById('predictionPassingGrade').textContent = predictionData.passing_grade_digunakan_saw;
+
+        document.getElementById('predictionDTKS').textContent = predictionData.alasan.DTKS ? 'Ya' : 'Tidak';
+
+        const faktorPenambahContainer = document.getElementById('predictionFaktorPenambahContainer');
+        const faktorPenambah = document.getElementById('predictionFaktorPenambah');
+        if (predictionData.alasan['Faktor Penambah Skor'] && predictionData.alasan['Faktor Penambah Skor'].length > 0) {
+            faktorPenambah.textContent = predictionData.alasan['Faktor Penambah Skor'].join(', ');
+            faktorPenambahContainer.style.display = '';
+        } else {
+            faktorPenambahContainer.style.display = 'none';
+        }
+
+        const faktorPengurangContainer = document.getElementById('predictionFaktorPengurangContainer');
+        const faktorPengurang = document.getElementById('predictionFaktorPengurang');
+        if (predictionData.alasan['Faktor Pengurang Skor'] && predictionData.alasan['Faktor Pengurang Skor'].length > 0) {
+            faktorPengurang.textContent = predictionData.alasan['Faktor Pengurang Skor'].join(', ');
+            faktorPengurangContainer.style.display = '';
+        } else {
+            faktorPengurangContainer.style.display = 'none';
+        }
+
+        // Show the modal
+        $(predictionModal).modal('show');
+    }
 });
 </script>
-{% endblock %}
-
+{% endblock scripts %}

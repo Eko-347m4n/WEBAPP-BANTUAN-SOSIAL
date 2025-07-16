@@ -61,6 +61,8 @@ class Penerima(db.Model):
     kartu_pra_kerja = db.Column(db.Boolean, default=False, nullable=False)
     bst = db.Column(db.Boolean, default=False, nullable=False)
     bansos_lainnya = db.Column(db.Boolean, default=False, nullable=False)
+    skor_saw_ternormalisasi = db.Column(db.Float, nullable=True) # New field for SAW score
+    status_kelayakan_knn = db.Column(db.String(50), nullable=True) # New field for KNN prediction status
 
     def __repr__(self):
         return f'<Penerima {self.nama}>'
