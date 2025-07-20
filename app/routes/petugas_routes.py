@@ -7,6 +7,7 @@ from app.utils.model_handler import predict_individual_status
 from werkzeug.utils import secure_filename
 import os
 import joblib
+import threading
 
 petugas_bp = Blueprint('petugas', __name__, url_prefix='/petugas')
 
@@ -52,7 +53,6 @@ def prediksi():
 @login_required
 def mass_predict():
     form = MassPredictionForm()
-    results = None
     if form.validate_on_submit():
         # Load the KNN model
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
@@ -70,7 +70,14 @@ def mass_predict():
         
         passing_grade = setting.passing_grade
 
-        # Perform mass prediction
+        # Start mass prediction in a background thread
+        thread = threading.Thread(target=_run_mass_prediction_in_background, args=(current_app._get_current_object(), knn_model, passing_grade))
+        thread.start()
+        flash('Proses prediksi massal telah dimulai di latar belakang. Anda akan melihat hasilnya setelah proses selesai.', 'info')
+        return redirect(url_for('petugas.mass_predict'))
+
+def _run_mass_prediction_in_background(app, knn_model, passing_grade):
+    with app.app_context():
         all_penerima = Penerima.query.all()
         total_processed = len(all_penerima)
         total_updated = 0
@@ -78,19 +85,28 @@ def mass_predict():
         for penerima in all_penerima:
             prediction_result = predict_individual_status(penerima.nama, db.session, knn_model, passing_grade, penerima_obj=penerima)
             if 'error' not in prediction_result:
-                # Update penerima status in database
                 penerima.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
                 penerima.skor_saw_ternormalisasi = prediction_result['skor_saw_ternormalisasi']
                 db.session.add(penerima)
                 total_updated += 1
             else:
-                current_app.logger.warning(f"Failed to predict for {penerima.nama}: {prediction_result['error']}")
+                app.logger.warning(f"Failed to predict for {penerima.nama}: {prediction_result['error']}")
         
         db.session.commit()
-        flash(f'Prediksi massal selesai. {total_updated} dari {total_processed} data penerima diperbarui.', 'success')
-        results = {'total_processed': total_processed, 'total_updated': total_updated}
+        # You might want to log the completion or send a notification here
+        app.logger.info(f'Prediksi massal selesai. {total_updated} dari {total_processed} data penerima diperbarui.')
 
-    return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form, results=results)
+    return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form)
+
+@petugas_bp.route('/train_model_now')
+@login_required
+def train_model_now():
+    from app.utils.model_handler import train_knn_model
+    train_knn_model(db.session)
+    flash('Model KNN berhasil dilatih ulang!', 'success')
+    
+    return redirect(url_for('petugas.dashboard'))
+
 
 @petugas_bp.route('/eligible_recipients')
 @login_required

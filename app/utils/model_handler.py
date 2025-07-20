@@ -127,3 +127,78 @@ def predict_individual_status(nama, db_session, knn_model, passing_grade, peneri
         "passing_grade_digunakan_saw": passing_grade,
         "alasan": alasan_detail
     }
+
+# ===============================
+# 2. Fungsi Pelatihan Model (Jika diperlukan)
+# ===============================
+def train_knn_model(db_session):
+    from app.database.models import Penerima
+    from sklearn.neighbors import KNeighborsClassifier
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import accuracy_score
+
+    all_penerima = Penerima.query.all()
+    if not all_penerima:
+        current_app.logger.warning("Tidak ada data penerima untuk melatih model KNN.")
+        return False
+
+    # Prepare data for training
+    data = []
+    target = [] # 1 for Layak, 0 for Tidak Layak (based on some criteria, e.g., SAW score > passing_grade)
+
+    # Define features based on PENAMBAH_KRITERIA_FIELDS and PENGURANG_KRITERIA_FIELDS
+    feature_columns = PENAMBAH_KRITERIA_FIELDS + PENGURANG_KRITERIA_FIELDS
+
+    # Assuming 'status_kelayakan_knn' is the ground truth for training
+    # You might need to define how 'Layak' or 'Tidak Layak' is determined for training data
+    # For example, if you have a manual label or a threshold on SAW score
+    for p in all_penerima:
+        row_features = [getattr(p, col) for col in feature_columns]
+        data.append(row_features)
+        # Convert 'Layak' to 1, 'Tidak Layak' to 0 based on SAW score and passing grade
+        # This allows initial training even if KNN status is not yet set
+        target.append(1 if p.skor_saw_ternormalisasi is not None and p.skor_saw_ternormalisasi >= current_app.config.get('DEFAULT_PASSING_GRADE', 10) else 0) 
+
+    X = np.array(data)
+    y = np.array(target)
+
+    if len(np.unique(y)) < 2:
+        current_app.logger.warning("Hanya ada satu kelas di data target. Tidak dapat melatih model KNN.")
+        return False
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    knn = KNeighborsClassifier(n_neighbors=3) # You can tune n_neighbors
+    knn.fit(X_train, y_train)
+
+    # Ensure feature_names_in_ is not saved with the model
+    if hasattr(knn, 'feature_names_in_'):
+        del knn.feature_names_in_
+
+    y_pred = knn.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    current_app.logger.info(f"Model KNN dilatih dengan akurasi: {accuracy}")
+
+    # Save the trained model
+    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+    joblib.dump(knn, MODEL_PATH)
+    current_app.logger.info(f"Model KNN berhasil disimpan di: {MODEL_PATH}")
+    return True
+
+# ===============================
+# 3. Fungsi untuk memuat model (dipanggil saat aplikasi dimulai)
+# ===============================
+def load_knn_model():
+    if os.path.exists(MODEL_PATH):
+        try:
+            model = joblib.load(MODEL_PATH)
+            if hasattr(model, 'feature_names_in_'):
+                current_app.logger.info("feature_names_in_ ditemukan dan akan dihapus.")
+                del model.feature_names_in_
+            current_app.logger.info("Model KNN berhasil dimuat.")
+            return model
+        except Exception as e:
+            current_app.logger.error(f"Gagal memuat model KNN: {e}")
+            return None
+    current_app.logger.warning("Model KNN tidak ditemukan. Harap latih model terlebih dahulu.")
+    return None
