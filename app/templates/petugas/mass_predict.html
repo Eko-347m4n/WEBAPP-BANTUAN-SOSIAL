@@ -13,29 +13,154 @@
                 <div class="card-body p-4">
                     <p class="text-muted">Fitur ini akan melakukan prediksi kelayakan untuk semua data penerima yang terdaftar di sistem dan memperbarui status kelayakan mereka berdasarkan model KNN.</p>
                     <p class="text-danger font-weight-bold">Proses ini mungkin memakan waktu tergantung jumlah data. Pastikan Anda ingin melanjutkan.</p>
-                    <form method="POST" action="{{ url_for('petugas.mass_predict') }}">
+                    <form id="massPredictForm">
                         {{ form.hidden_tag() }}
+                        <div class="form-group mb-3">
+                            {{ form.passing_grade.label(class="form-control-label") }}
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-graduation-cap"></i></span>
+                                </div>
+                                {{ form.passing_grade(class="form-control" + (" is-invalid" if form.passing_grade.errors else ""), placeholder="Contoh: 0.75") }}
+                                {% if form.passing_grade.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.passing_grade.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <small class="form-text text-muted">Nilai ambang batas untuk kelayakan (antara 0 dan 1).</small>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            {{ form.kuota.label(class="form-control-label") }}
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                </div>
+                                {{ form.kuota(class="form-control" + (" is-invalid" if form.kuota.errors else ""), placeholder="Contoh: 100") }}
+                                {% if form.kuota.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.kuota.errors %}<span>{{ error }}</span>{% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <small class="form-text text-muted">Jumlah maksimal penerima bantuan.</small>
+                        </div>
+
                         <div class="d-flex justify-content-end">
-                            {{ form.submit(class="btn btn-warning btn-lg") }}
+                            <button type="button" class="btn btn-warning btn-lg" id="submitMassPredict">Mulai Prediksi Massal</button>
                         </div>
                     </form>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                {% if category == 'info' and 'latar belakang' in message %}
+                                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                                        <div class="spinner-border mr-3" role="status" aria-hidden="true"></div>
+                                        <div>{{ message }}</div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
                 </div>
             </div>
 
-            {% if results %}
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0 text-center"><i class="fas fa-check-circle"></i> Hasil Prediksi Massal</h4>
-                </div>
-                <div class="card-body">
-                    <p>Total data penerima yang diproses: <strong>{{ results.total_processed }}</strong></p>
-                    <p>Jumlah penerima yang statusnya diperbarui: <strong>{{ results.total_updated }}</strong></p>
-                    <p>Prediksi massal berhasil diselesaikan.</p>
-                    <a href="{{ url_for('petugas.eligible_recipients') }}" class="btn btn-primary mt-3">Lihat Daftar Penerima Layak</a>
-                </div>
+            <div class="modal fade" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="loadingModalLabel" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="loadingModalLabel">Memproses Prediksi Massal...</h5>
             </div>
-            {% endif %}
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-3" id="progressStatus">Mohon tunggu, proses ini mungkin memakan waktu beberapa saat.</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progressBar">0%</div>
+                </div>
+                <p class="mt-2"><small>Diproses: <span id="processedCount">0</span>/<span id="totalCount">0</span></small></p>
+                <p><small>Waktu Berlalu: <span id="elapsedTime">0s</span></small></p>
+                <p><small>Estimasi Sisa Waktu: <span id="estimatedTime">0s</span></small></p>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
+
+{% endblock content %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        let progressInterval;
+
+        // Get CSRF token from the hidden input field
+        const csrf_token = $('input[name="csrf_token"]').val();
+
+        $('#submitMassPredict').click(function(event) {
+            event.preventDefault(); // Prevent default button click behavior
+            $('#loadingModal').modal('show');
+            
+            // Send AJAX request to start the mass prediction
+            $.ajax({
+                url: "{{ url_for('petugas.mass_predict') }}", // Use explicit URL
+                type: "POST", // Explicitly set type
+                data: $('#massPredictForm').serialize(),
+                headers: {
+                    'X-CSRFToken': csrf_token // Add CSRF token to the request headers
+                },
+                success: function(response) {
+                    if (response.status === 'started') {
+                        // Start polling for progress updates
+                        progressInterval = setInterval(updateProgress, 1000); // Poll every 1 second
+                    } else {
+                        $('#loadingModal').modal('hide');
+                        alert('Terjadi kesalahan saat memulai prediksi massal: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#loadingModal').modal('hide');
+                    alert('Terjadi kesalahan saat memulai prediksi massal: ' + error);
+                }
+            });
+        });
+
+        function updateProgress() {
+            $.getJSON("{{ url_for('petugas.get_mass_predict_progress') }}", function(data) {
+                if (data.running) {
+                    $('#progressBar').css('width', data.percentage + '%').attr('aria-valuenow', data.percentage).text(data.percentage + '%');
+                    $('#processedCount').text(data.processed);
+                    $('#totalCount').text(data.total);
+                    $('#elapsedTime').text(formatTime(data.elapsed_time));
+                    $('#estimatedTime').text(formatTime(data.estimated_time_remaining));
+                    $('#progressStatus').text('Memproses data...');
+                } else if (data.status === 'completed') {
+                    clearInterval(progressInterval);
+                    $('#loadingModal').modal('hide');
+                    window.location.href = "{{ url_for('petugas.eligible_recipients') }}"; // Redirect on completion
+                } else if (data.status === 'error') {
+                    clearInterval(progressInterval);
+                    $('#loadingModal').modal('hide');
+                    alert('Terjadi kesalahan selama prediksi massal: ' + data.error);
+                }
+            }).fail(function(jqxhr, textStatus, error) {
+                clearInterval(progressInterval);
+                $('#loadingModal').modal('hide');
+                alert('Gagal mengambil progres: ' + error);
+            });
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 60) {
+                return Math.round(seconds) + 's';
+            } else {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.round(seconds % 60);
+                return minutes + 'm ' + remainingSeconds + 's';
+            }
+        }
+    });
+</script>
+{% endblock scripts %}

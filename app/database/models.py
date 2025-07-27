@@ -64,5 +64,8 @@ class Penerima(db.Model):
     skor_saw_ternormalisasi = db.Column(db.Float, nullable=True) # New field for SAW score
     status_kelayakan_knn = db.Column(db.String(50), nullable=True) # New field for KNN prediction status
 
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
     def __repr__(self):
         return f'<Penerima {self.nama}>'

@@ -1,13 +1,31 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
 from flask_login import login_required
 from app import db
 from app.database.models import Penerima, Setting
 from app.forms import PenerimaForm, IndexPredictionForm, SettingForm, MassPredictionForm
 from app.utils.model_handler import predict_individual_status
 from werkzeug.utils import secure_filename
+from flask import current_app as app
+from threading import Lock
 import os
 import joblib
 import threading
+import time
+from datetime import datetime
+
+# Global state for mass prediction progress
+_mass_predict_progress_state = {
+    'running': False,
+    'total': 0,
+    'processed': 0,
+    'percentage': 0,
+    'start_time': None,
+    'elapsed_time': 0,
+    'estimated_time_remaining': 0,
+    'status': 'idle', # idle, processing, completed, error
+    'error': None
+}
+progress_lock = threading.Lock()
 
 petugas_bp = Blueprint('petugas', __name__, url_prefix='/petugas')
 
@@ -49,54 +67,108 @@ def prediksi():
 
     return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form, prediction=prediction, setting=setting)
 
+def run_mass_prediction_in_background(app, all_penerima_ids, passing_grade, model_path):
+    global _mass_predict_progress_state
+    with app.app_context(): # Create app context within the thread
+        try:
+            knn_model = joblib.load(model_path)
+            updated_penerima_objects = []
+
+            with db.session.no_autoflush():
+                for i, penerima_id in enumerate(all_penerima_ids):
+                    # Use db.session within the app_context of this thread
+                    penerima_obj = Penerima.query.get(penerima_id)
+                    if penerima_obj:
+                        prediction_result = predict_individual_status(
+                            nama=penerima_obj.nama,
+                            db_session=db.session,
+                            knn_model=knn_model,
+                            passing_grade=passing_grade,
+                            penerima_obj=penerima_obj
+                        )
+                        if 'error' not in prediction_result:
+                            penerima_obj.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
+                            penerima_obj.skor_saw_ternormalisasi = prediction_result['skor_saw_ternormalisasi']
+                            updated_penerima_objects.append(penerima_obj)
+                    
+                    with progress_lock:
+                        _mass_predict_progress_state['processed'] = i + 1
+                        _mass_predict_progress_state['percentage'] = int((_mass_predict_progress_state['processed'] / _mass_predict_progress_state['total']) * 100)
+                        _mass_predict_progress_state['elapsed_time'] = (datetime.now() - _mass_predict_progress_state['start_time']).total_seconds()
+                        if _mass_predict_progress_state['processed'] > 0:
+                            time_per_item = _mass_predict_progress_state['elapsed_time'] / _mass_predict_progress_state['processed']
+                            remaining_items = _mass_predict_progress_state['total'] - _mass_predict_progress_state['processed']
+                            _mass_predict_progress_state['estimated_time_remaining'] = int(remaining_items * time_per_item)
+                        else:
+                            _mass_predict_progress_state['estimated_time_remaining'] = 0
+
+            if updated_penerima_objects:
+                db.session.bulk_save_objects(updated_penerima_objects)
+                db.session.commit()
+            
+            with progress_lock:
+                _mass_predict_progress_state['status'] = 'completed'
+
+        except Exception as e:
+            with progress_lock:
+                _mass_predict_progress_state['status'] = 'error'
+                _mass_predict_progress_state['error'] = str(e)
+        finally:
+            # Ensure the session is removed/closed for this thread's context
+            db.session.remove()
+            with progress_lock:
+                _mass_predict_progress_state['running'] = False
+
 @petugas_bp.route('/mass_predict', methods=['GET', 'POST'])
 @login_required
 def mass_predict():
     form = MassPredictionForm()
     if form.validate_on_submit():
-        # Load the KNN model
-        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
-        try:
-            knn_model = joblib.load(model_path)
-        except Exception as e:
-            flash(f'Gagal memuat model prediksi: {str(e)}', 'danger')
-            return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form)
+        # Reset progress state before starting a new prediction
+        with progress_lock:
+            _mass_predict_progress_state['running'] = False
+            _mass_predict_progress_state['total'] = 0
+            _mass_predict_progress_state['processed'] = 0
+            _mass_predict_progress_state['percentage'] = 0
+            _mass_predict_progress_state['start_time'] = None
+            _mass_predict_progress_state['elapsed_time'] = 0
+            _mass_predict_progress_state['estimated_time_remaining'] = 0
+            _mass_predict_progress_state['status'] = 'idle'
+            _mass_predict_progress_state['error'] = None
 
-        # Get passing grade from settings
         setting = Setting.query.first()
         if not setting:
-            flash('Pengaturan passing grade belum ditentukan. Harap atur di Pengaturan Sistem.', 'danger')
-            return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form)
+            setting = Setting()
+            db.session.add(setting)
         
-        passing_grade = setting.passing_grade
-
-        # Start mass prediction in a background thread
-        thread = threading.Thread(target=_run_mass_prediction_in_background, args=(current_app._get_current_object(), knn_model, passing_grade))
-        thread.start()
-        flash('Proses prediksi massal telah dimulai di latar belakang. Anda akan melihat hasilnya setelah proses selesai.', 'info')
-        return redirect(url_for('petugas.mass_predict'))
-
-def _run_mass_prediction_in_background(app, knn_model, passing_grade):
-    with app.app_context():
-        all_penerima = Penerima.query.all()
-        total_processed = len(all_penerima)
-        total_updated = 0
-
-        for penerima in all_penerima:
-            prediction_result = predict_individual_status(penerima.nama, db.session, knn_model, passing_grade, penerima_obj=penerima)
-            if 'error' not in prediction_result:
-                penerima.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
-                penerima.skor_saw_ternormalisasi = prediction_result['skor_saw_ternormalisasi']
-                db.session.add(penerima)
-                total_updated += 1
-            else:
-                app.logger.warning(f"Failed to predict for {penerima.nama}: {prediction_result['error']}")
-        
+        setting.passing_grade = form.passing_grade.data
+        setting.kuota = form.kuota.data
         db.session.commit()
-        # You might want to log the completion or send a notification here
-        app.logger.info(f'Prediksi massal selesai. {total_updated} dari {total_processed} data penerima diperbarui.')
+
+        all_penerima_ids = [p.id for p in Penerima.query.with_entities(Penerima.id).all()]
+        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
+
+        with progress_lock:
+            _mass_predict_progress_state['running'] = True
+            _mass_predict_progress_state['total'] = len(all_penerima_ids)
+            _mass_predict_progress_state['start_time'] = datetime.now()
+            _mass_predict_progress_state['status'] = 'processing'
+
+        app_instance = current_app._get_current_object()
+        threading.Thread(target=run_mass_prediction_in_background, args=(app_instance, all_penerima_ids, setting.passing_grade, model_path)).start()
+
+        return jsonify({'status': 'started', 'message': 'Proses prediksi massal dimulai di latar belakang.'})
 
     return render_template('petugas/mass_predict.html', title='Prediksi Massal Kelayakan', form=form)
+
+@petugas_bp.route('/mass_predict_progress')
+@login_required
+def get_mass_predict_progress():
+    global _mass_predict_progress_state
+    with progress_lock:
+        return jsonify(_mass_predict_progress_state)
+
+
 
 @petugas_bp.route('/train_model_now')
 @login_required
@@ -106,6 +178,8 @@ def train_model_now():
     flash('Model KNN berhasil dilatih ulang!', 'success')
     
     return redirect(url_for('petugas.dashboard'))
+
+
 
 
 @petugas_bp.route('/eligible_recipients')
@@ -126,26 +200,6 @@ def eligible_recipients():
     ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
 
     return render_template('petugas/eligible_recipients.html', title='Daftar Penerima Layak', eligible_list=eligible_list, passing_grade=passing_grade, kuota=kuota)
-
-@petugas_bp.route('/settings', methods=['GET', 'POST'])
-@login_required
-def settings():
-    form = SettingForm()
-    setting = Setting.query.first()
-    if not setting:
-        setting = Setting(passing_grade=10, kuota=50)
-        db.session.add(setting)
-        db.session.commit()
-
-    if form.validate_on_submit():
-        setting.passing_grade = form.passing_grade.data
-        setting.kuota = form.kuota.data
-        db.session.commit()
-        flash('Pengaturan berhasil disimpan.', 'success')
-    
-    form.passing_grade.data = setting.passing_grade
-    form.kuota.data = setting.kuota
-    return render_template('petugas/form_setting.html', title='Pengaturan Kuota dan Passing Grade', form=form)
 
 @petugas_bp.route('/tambah_penerima', methods=['GET', 'POST'])
 @login_required
@@ -226,15 +280,16 @@ def edit_penerima(penerima_id):
         penerima.kartu_pra_kerja = str_to_bool(form.kartu_pra_kerja.data)
         penerima.bst = str_to_bool(form.bst.data)
         penerima.bansos_lainnya = str_to_bool(form.bansos_lainnya.data)
-        
+
         if form.dokumen_pendukung.data:
             file = form.dokumen_pendukung.data
             filename = secure_filename(file.filename)
-            upload_folder = current_app.config['UPLOAD_FOLDER']
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
             file_path = os.path.join(upload_folder, filename)
             file.save(file_path)
             penerima.dokumen_pendukung_path = file_path
 
+        db.session.add(penerima)
         db.session.commit()
         flash('Data penerima berhasil diperbarui!', 'success')
         return redirect(url_for('petugas.list_penerima'))

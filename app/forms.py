@@ -41,7 +41,11 @@ class EditUserForm(FlaskForm):
     # Role tidak diubah melalui form ini oleh admin, untuk menjaga integritas.
     submit = SubmitField('Update User')
 
+from wtforms import FloatField
+
 class MassPredictionForm(FlaskForm):
+    passing_grade = FloatField('Passing Grade', validators=[DataRequired(), NumberRange(min=0, max=1)])
+    kuota = IntegerField('Kuota', validators=[DataRequired(), NumberRange(min=1)])
     submit = SubmitField('Mulai Prediksi Massal')
 
 class IndexPredictionForm(FlaskForm):

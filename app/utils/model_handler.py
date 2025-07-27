@@ -3,6 +3,7 @@ import joblib
 import os
 import requests # Import requests
 from flask import current_app
+from app import db # Import db
 
 # ===============================
 # 0. Konfigurasi Global & Kriteria
@@ -41,7 +42,7 @@ def _get_region_name(region_id, endpoint):
 # ===============================
 # 1. Fungsi Prediksi Individu (Hybrid: SAW Score + KNN Prediction)
 # ===============================
-def predict_individual_status(nama, db_session, knn_model, passing_grade, penerima_obj=None, location_data=None):
+def predict_individual_status(nama, knn_model, passing_grade, db_session, penerima_obj=None, location_data=None):
     from app.database.models import Penerima
 
     if penerima_obj:

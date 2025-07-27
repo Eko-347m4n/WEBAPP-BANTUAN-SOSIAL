@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20mm;
+            font-size: 10pt;
+        }
+        h1, h3 {
+            text-align: center;
+            color: #333;
+        }
+        .lead {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .badge {
+            padding: 3px 6px;
+            border-radius: 3px;
+            color: white;
+            font-size: 8pt;
+        }
+        .badge-success { background-color: #28a745; }
+        .badge-danger { background-color: #dc3545; }
+        .alert {
+            padding: 10px;
+            background-color: #e0f7fa;
+            border: 1px solid #b2ebf2;
+            color: #006064;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <p class="lead">Berikut adalah daftar penerima yang layak berdasarkan passing grade <strong>{{ passing_grade }}</strong> dan kuota <strong>{{ kuota }}</strong>:</p>
+
+    {% if eligible_list and eligible_list|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">No.</th>
+                <th scope="col">Nama Lengkap</th>
+                <th scope="col">Provinsi</th>
+                <th scope="col">Kabupaten</th>
+                <th scope="col">Kecamatan</th>
+                <th scope="col">Desa</th>
+                <th scope="col">Pekerjaan</th>
+                <th scope="col" class="text-center">Skor SAW Ternormalisasi</th>
+                <th scope="col" class="text-center">Status Kelayakan KNN</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for penerima in eligible_list %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ penerima.nama }}</td>
+                <td>{{ penerima.provinsi }}</td>
+                <td>{{ penerima.kabupaten }}</td>
+                <td>{{ penerima.kecamatan }}</td>
+                <td>{{ penerima.desa }}</td>
+                <td>{{ penerima.pekerjaan }}</td>
+                <td class="text-center">{{ penerima.skor_saw_ternormalisasi | round(3) }}</td>
+                <td class="text-center">
+                    {% if penerima.status_kelayakan_knn == 'Layak' %}
+                        <span class="badge badge-success">Layak</span>
+                    {% else %}
+                        <span class="badge badge-danger">Tidak Layak</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert">
+        Tidak ada penerima yang memenuhi kriteria kelayakan saat ini.
+    </div>
+    {% endif %}
+</body>
+</html>

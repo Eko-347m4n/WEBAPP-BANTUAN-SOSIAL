@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect # Tambahkan impor ini
 from config import Config
 
 
+
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()  # Akan diaktifkan nanti
@@ -23,6 +24,8 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     login_manager.init_app(app)  # Akan diaktifkan nanti
     csrf.init_app(app) # Inisialisasi CSRFProtect dengan aplikasi
+
+    
 
     with app.app_context():
         # Load model once
