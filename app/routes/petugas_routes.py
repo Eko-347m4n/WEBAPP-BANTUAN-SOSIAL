@@ -52,6 +52,12 @@ def prediksi():
 
     if form.validate_on_submit():
         nama = form.nama.data
+        
+        penerima_obj = Penerima.query.filter_by(nama=nama).first()
+        if not penerima_obj:
+            flash(f'Individu dengan nama \'{nama}\' tidak ditemukan.', 'danger')
+            return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form, prediction=prediction, setting=setting)
+
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
         try:
             knn_model = joblib.load(model_path)
@@ -60,7 +66,13 @@ def prediksi():
             return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form)
 
         passing_grade = setting.passing_grade
-        prediction = predict_individual_status(nama=nama, db_session=db.session, knn_model=knn_model, passing_grade=passing_grade)
+        prediction = predict_individual_status(
+            penerima_obj=penerima_obj,
+            knn_model=knn_model,
+            passing_grade=passing_grade,
+            logger=current_app.logger,
+            cache={}
+        )
 
         if 'error' in prediction:
             flash(prediction['error'], 'danger')

@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
-from app.database.models import User, Setting
+from app.database.models import User, Setting, Penerima
 from app import db
 from app.forms import LoginForm, RegistrationForm, IndexPredictionForm
 from app.utils.model_handler import predict_individual_status
@@ -26,6 +26,12 @@ def index():
         kecamatan_id = request.form.get('kecamatan')
         desa_id = request.form.get('desa')
 
+        penerima_obj = Penerima.query.filter_by(nama=nama).first()
+
+        if not penerima_obj:
+            flash(f'Individu dengan nama \'{nama}\' tidak ditemukan.', 'danger')
+            return redirect(url_for('auth.index'))
+
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
         try:
             knn_model = joblib.load(model_path)
@@ -33,17 +39,13 @@ def index():
             flash(f'Gagal memuat model prediksi: {str(e)}', 'danger')
             return redirect(url_for('auth.index'))
 
+        passing_grade = setting.passing_grade
         prediction_result = predict_individual_status(
-            nama=nama,
-            db_session=db.session,
+            penerima_obj=penerima_obj,
             knn_model=knn_model,
-            passing_grade=setting.passing_grade,
-            location_data={
-                'provinsi': provinsi_id,
-                'kabupaten': kabupaten_id,
-                'kecamatan': kecamatan_id,
-                'desa': desa_id
-            }
+            passing_grade=passing_grade,
+            logger=current_app.logger,
+            cache={}
         )
 
         if 'error' in prediction_result:
