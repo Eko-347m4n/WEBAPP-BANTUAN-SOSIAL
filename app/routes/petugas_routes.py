@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session, make_response
 from flask_login import login_required
 from app import db
 from app.database.models import Penerima, Setting
 from app.forms import PenerimaForm, IndexPredictionForm, SettingForm, MassPredictionForm
-from app.utils.model_handler import predict_individual_status
+from app.utils.model_handler import predict_individual_status, _get_region_name
 from werkzeug.utils import secure_filename
 from flask import current_app as app
 from threading import Lock
@@ -12,6 +12,7 @@ import joblib
 import threading
 import time
 from datetime import datetime
+import weasyprint
 
 # Global state for mass prediction progress
 _mass_predict_progress_state = {
@@ -68,39 +69,37 @@ def prediksi():
     return render_template('petugas/form_prediksi.html', title='Prediksi Kelayakan', form=form, prediction=prediction, setting=setting)
 
 def run_mass_prediction_in_background(app, all_penerima_ids, passing_grade, model_path):
-    global _mass_predict_progress_state
-    with app.app_context(): # Create app context within the thread
+    with app.app_context():
+        global _mass_predict_progress_state
         try:
             knn_model = joblib.load(model_path)
+            all_penerima = Penerima.query.filter(Penerima.id.in_(all_penerima_ids)).all()
             updated_penerima_objects = []
+            cache = {}
 
-            with db.session.no_autoflush():
-                for i, penerima_id in enumerate(all_penerima_ids):
-                    # Use db.session within the app_context of this thread
-                    penerima_obj = Penerima.query.get(penerima_id)
-                    if penerima_obj:
-                        prediction_result = predict_individual_status(
-                            nama=penerima_obj.nama,
-                            db_session=db.session,
-                            knn_model=knn_model,
-                            passing_grade=passing_grade,
-                            penerima_obj=penerima_obj
-                        )
-                        if 'error' not in prediction_result:
-                            penerima_obj.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
-                            penerima_obj.skor_saw_ternormalisasi = prediction_result['skor_saw_ternormalisasi']
-                            updated_penerima_objects.append(penerima_obj)
-                    
-                    with progress_lock:
-                        _mass_predict_progress_state['processed'] = i + 1
-                        _mass_predict_progress_state['percentage'] = int((_mass_predict_progress_state['processed'] / _mass_predict_progress_state['total']) * 100)
-                        _mass_predict_progress_state['elapsed_time'] = (datetime.now() - _mass_predict_progress_state['start_time']).total_seconds()
-                        if _mass_predict_progress_state['processed'] > 0:
-                            time_per_item = _mass_predict_progress_state['elapsed_time'] / _mass_predict_progress_state['processed']
-                            remaining_items = _mass_predict_progress_state['total'] - _mass_predict_progress_state['processed']
-                            _mass_predict_progress_state['estimated_time_remaining'] = int(remaining_items * time_per_item)
-                        else:
-                            _mass_predict_progress_state['estimated_time_remaining'] = 0
+            for i, penerima_obj in enumerate(all_penerima):
+                prediction_result = predict_individual_status(
+                    penerima_obj=penerima_obj,
+                    knn_model=knn_model,
+                    passing_grade=passing_grade,
+                    logger=app.logger,
+                    cache=cache
+                )
+                if 'error' not in prediction_result:
+                    penerima_obj.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
+                    penerima_obj.skor_saw_ternormalisasi = prediction_result['skor_saw_ternormalisasi']
+                    updated_penerima_objects.append(penerima_obj)
+                
+                with progress_lock:
+                    _mass_predict_progress_state['processed'] = i + 1
+                    _mass_predict_progress_state['percentage'] = int((_mass_predict_progress_state['processed'] / _mass_predict_progress_state['total']) * 100)
+                    _mass_predict_progress_state['elapsed_time'] = (datetime.now() - _mass_predict_progress_state['start_time']).total_seconds()
+                    if _mass_predict_progress_state['processed'] > 0:
+                        time_per_item = _mass_predict_progress_state['elapsed_time'] / _mass_predict_progress_state['processed']
+                        remaining_items = _mass_predict_progress_state['total'] - _mass_predict_progress_state['processed']
+                        _mass_predict_progress_state['estimated_time_remaining'] = int(remaining_items * time_per_item)
+                    else:
+                        _mass_predict_progress_state['estimated_time_remaining'] = 0
 
             if updated_penerima_objects:
                 db.session.bulk_save_objects(updated_penerima_objects)
@@ -114,7 +113,6 @@ def run_mass_prediction_in_background(app, all_penerima_ids, passing_grade, mode
                 _mass_predict_progress_state['status'] = 'error'
                 _mass_predict_progress_state['error'] = str(e)
         finally:
-            # Ensure the session is removed/closed for this thread's context
             db.session.remove()
             with progress_lock:
                 _mass_predict_progress_state['running'] = False
@@ -124,7 +122,6 @@ def run_mass_prediction_in_background(app, all_penerima_ids, passing_grade, mode
 def mass_predict():
     form = MassPredictionForm()
     if form.validate_on_submit():
-        # Reset progress state before starting a new prediction
         with progress_lock:
             _mass_predict_progress_state['running'] = False
             _mass_predict_progress_state['total'] = 0
@@ -193,13 +190,49 @@ def eligible_recipients():
     passing_grade = setting.passing_grade
     kuota = setting.kuota
 
-    # Fetch eligible recipients based on KNN status and SAW score
     eligible_list = Penerima.query.filter(
         Penerima.status_kelayakan_knn == 'Layak',
         Penerima.skor_saw_ternormalisasi >= passing_grade
     ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
 
+    # Convert numerical IDs to text names for display
+    cache = {} # Initialize cache for this request
+    for penerima in eligible_list:
+        original_provinsi_id = penerima.provinsi
+        original_kabupaten_id = penerima.kabupaten
+        original_kecamatan_id = penerima.kecamatan
+
+        penerima.provinsi = _get_region_name(original_provinsi_id, 'provinces.json', current_app.logger, cache)
+        penerima.kabupaten = _get_region_name(original_kabupaten_id, f'regencies/{original_provinsi_id}.json', current_app.logger, cache)
+        penerima.kecamatan = _get_region_name(original_kecamatan_id, f'districts/{original_kabupaten_id}.json', current_app.logger, cache)
+        penerima.desa = _get_region_name(penerima.desa, f'villages/{original_kecamatan_id}.json', current_app.logger, cache)
+
     return render_template('petugas/eligible_recipients.html', title='Daftar Penerima Layak', eligible_list=eligible_list, passing_grade=passing_grade, kuota=kuota)
+
+@petugas_bp.route('/eligible_recipients/pdf')
+@login_required
+def eligible_recipients_pdf():
+    setting = Setting.query.first()
+    if not setting:
+        flash('Pengaturan passing grade dan kuota belum ditentukan. Harap atur di Pengaturan Sistem.', 'danger')
+        return redirect(url_for('petugas.settings'))
+
+    passing_grade = setting.passing_grade
+    kuota = setting.kuota
+
+    eligible_list = Penerima.query.filter(
+        Penerima.status_kelayakan_knn == 'Layak',
+        Penerima.skor_saw_ternormalisasi >= passing_grade
+    ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
+
+    rendered_html = render_template('petugas/eligible_recipients_print.html', eligible_list=eligible_list, passing_grade=passing_grade, kuota=kuota)
+    pdf = weasyprint.HTML(string=rendered_html).write_pdf()
+
+    response = make_response(pdf)
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename=daftar_penerima_layak.pdf'
+
+    return response
 
 @petugas_bp.route('/tambah_penerima', methods=['GET', 'POST'])
 @login_required
@@ -254,7 +287,6 @@ def edit_penerima(penerima_id):
     form = PenerimaForm(obj=penerima)
 
     if form.validate_on_submit():
-        # Store original location data
         original_provinsi = penerima.provinsi
         original_kabupaten = penerima.kabupaten
         original_kecamatan = penerima.kecamatan
@@ -262,13 +294,11 @@ def edit_penerima(penerima_id):
 
         form.populate_obj(penerima)
 
-        # Restore original location data to prevent changes
         penerima.provinsi = original_provinsi
         penerima.kabupaten = original_kabupaten
         penerima.kecamatan = original_kecamatan
         penerima.desa = original_desa
 
-        # Handle boolean conversion from form
         penerima.dtks = str_to_bool(form.dtks.data)
         penerima.keluarga_miskin_ekstrem = str_to_bool(form.keluarga_miskin_ekstrem.data)
         penerima.kehilangan_mata_pencaharian = str_to_bool(form.kehilangan_mata_pencaharian.data)
@@ -294,7 +324,6 @@ def edit_penerima(penerima_id):
         flash('Data penerima berhasil diperbarui!', 'success')
         return redirect(url_for('petugas.list_penerima'))
 
-    # Pre-populate form with boolean as string for SelectField
     form.dtks.data = str(penerima.dtks)
     form.keluarga_miskin_ekstrem.data = str(penerima.keluarga_miskin_ekstrem)
     form.kehilangan_mata_pencaharian.data = str(penerima.kehilangan_mata_pencaharian)
