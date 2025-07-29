@@ -12,7 +12,7 @@
         <div class="card-body">
             {% if users %}
             <div class="table-responsive">
-                <table class="table table-striped table-hover table-bordered table-sm">
+                <table class="table table-striped table-hover table-bordered table-sm" id="usersTable" style="display:none;">
                     <thead class="thead-dark">
                         <tr>
                             <th scope="col">ID</th>
@@ -31,8 +31,8 @@
                             <td><span class="badge badge-{{ 'primary' if user.role == 'admin' else 'info' }}">{{ user.role | capitalize }}</span></td>
                             <td class="text-center">
                                 {% if user.role != 'admin' %}
-                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-warning btn-sm" title="Edit"><i class="fas fa-edit"></i></a>
-                                <button type="button" class="btn btn-danger btn-sm" title="Hapus" data-toggle="modal" data-target="#deleteUserModal-{{ user.id }}">
+                                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="Edit User"><i class="fas fa-edit"></i></a>
+                                <button type="button" class="btn btn-danger btn-sm" data-toggle="tooltip" title="Hapus User" data-toggle="modal" data-target="#deleteUserModal-{{ user.id }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                                 {% else %}
@@ -45,9 +45,13 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle fa-2x mb-2"></i><br>
-                Belum ada pengguna yang terdaftar selain admin.
+            <div class="alert alert-info text-center p-5">
+                <i class="fas fa-users fa-3x mb-3"></i>
+                <h4>Belum Ada Pengguna</h4>
+                <p>Saat ini belum ada pengguna yang terdaftar selain Anda.</p>
+                <a href="{{ url_for('admin.add_user') }}" class="btn btn-success mt-3">
+                    <i class="fas fa-user-plus"></i> Tambah User Baru
+                </a>
             </div>
             {% endif %}
         </div>
@@ -81,4 +85,18 @@
     {% endif %}
 {% endfor %}
 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        $('#usersTable').DataTable({
+            "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Indonesian.json" },
+            "initComplete": function(settings, json) {
+                $('#usersTable').show();
+            }
+        });
+    });
+</script>
 {% endblock %}

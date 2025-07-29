@@ -87,6 +87,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">Kabupaten/Kota: <span class="font-weight-bold" id="predictionKabupaten"></span></li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">Kecamatan: <span class="font-weight-bold" id="predictionKecamatan"></span></li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">Desa: <span class="font-weight-bold" id="predictionDesa"></span></li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">Waktu Prediksi: <span class="font-weight-bold" id="predictionTimestamp"></span></li>
                 </ul>
                 <hr>
                 <div class="text-center mb-4">
@@ -102,11 +103,12 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center">Skor Aktual: <span class="font-weight-bold" id="predictionSkorAktual"></span></li>
                             <li class="list-group-item d-flex justify-content-between align-items-center">Skor Ternormalisasi: <span class="font-weight-bold" id="predictionSkorNormalisasi"></span></li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center">Passing Grade: <span class="font-weight-bold" id="predictionPassingGrade"></span></li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">Passing Grade: <span class="font-weight-bold text-primary" id="predictionPassingGrade"></span></li>
                         </ul>
                     </div>
                     <div class="col-md-6">
-                        <h6><i class="fas fa-info-circle"></i> Faktor Penentu</h6>
+                        <h6><i class="fas fa-info-circle"></i> Ringkasan Faktor Penentu</h6>
+                        <p id="predictionSummary" class="text-muted"></p>
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item d-flex justify-content-between align-items-center">Terdaftar di DTKS: <span class="font-weight-bold" id="predictionDTKS"></span></li>
                             <li class="list-group-item" id="predictionFaktorPenambahContainer">Penambah Skor: <span class="font-weight-bold" id="predictionFaktorPenambah"></span></li>
@@ -252,11 +254,32 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('predictionSkorAktual').textContent = predictionData.skor_total_saw_aktual.toFixed(3);
         document.getElementById('predictionSkorNormalisasi').textContent = predictionData.skor_saw_ternormalisasi.toFixed(3);
         document.getElementById('predictionPassingGrade').textContent = predictionData.passing_grade_digunakan_saw;
+        document.getElementById('predictionTimestamp').textContent = predictionData.timestamp;
 
         document.getElementById('predictionDTKS').textContent = predictionData.alasan.DTKS ? 'Ya' : 'Tidak';
 
         const faktorPenambahContainer = document.getElementById('predictionFaktorPenambahContainer');
         const faktorPenambah = document.getElementById('predictionFaktorPenambah');
+        const faktorPengurangContainer = document.getElementById('predictionFaktorPengurangContainer');
+        const faktorPengurang = document.getElementById('predictionFaktorPengurang');
+        const predictionSummary = document.getElementById('predictionSummary');
+
+        let summaryText = '';
+        if (predictionData.status_kelayakan_knn === 'Layak') {
+            if (predictionData.alasan['Faktor Penambah Skor'] && predictionData.alasan['Faktor Penambah Skor'].length > 0) {
+                summaryText = 'Layak karena: ' + predictionData.alasan['Faktor Penambah Skor'].join(', ') + '.';
+            } else {
+                summaryText = 'Layak berdasarkan skor dan kriteria umum.';
+            }
+        } else if (predictionData.status_kelayakan_knn === 'Tidak Layak') {
+            if (predictionData.alasan['Faktor Pengurang Skor'] && predictionData.alasan['Faktor Pengurang Skor'].length > 0) {
+                summaryText = 'Tidak Layak karena: ' + predictionData.alasan['Faktor Pengurang Skor'].join(', ') + '.';
+            } else {
+                summaryText = 'Tidak Layak berdasarkan skor dan kriteria umum.';
+            }
+        }
+        predictionSummary.textContent = summaryText;
+
         if (predictionData.alasan['Faktor Penambah Skor'] && predictionData.alasan['Faktor Penambah Skor'].length > 0) {
             faktorPenambah.textContent = predictionData.alasan['Faktor Penambah Skor'].join(', ');
             faktorPenambahContainer.style.display = '';
@@ -264,8 +287,6 @@ document.addEventListener('DOMContentLoaded', function () {
             faktorPenambahContainer.style.display = 'none';
         }
 
-        const faktorPengurangContainer = document.getElementById('predictionFaktorPengurangContainer');
-        const faktorPengurang = document.getElementById('predictionFaktorPengurang');
         if (predictionData.alasan['Faktor Pengurang Skor'] && predictionData.alasan['Faktor Pengurang Skor'].length > 0) {
             faktorPengurang.textContent = predictionData.alasan['Faktor Pengurang Skor'].join(', ');
             faktorPengurangContainer.style.display = '';

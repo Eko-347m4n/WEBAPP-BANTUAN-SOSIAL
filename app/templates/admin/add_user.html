@@ -49,7 +49,12 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                 </div>
-                                {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Password") }}
+                                {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Password", id="password") }}
+                                <div class="input-group-append">
+                                    <span class="input-group-text" style="cursor: pointer;" id="togglePassword">
+                                        <i class="fas fa-eye" id="toggleIcon"></i>
+                                    </span>
+                                </div>
                                 {% if form.password.errors %}
                                     <div class="invalid-feedback">
                                         {% for error in form.password.errors %}<span>{{ error }}</span>{% endfor %}
@@ -64,7 +69,12 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text"><i class="fas fa-lock"></i></span>
                                 </div>
-                                {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else ""), placeholder="Konfirmasi Password") }}
+                                {{ form.password2(class="form-control" + (" is-invalid" if form.password2.errors else ""), placeholder="Konfirmasi Password", id="password2") }}
+                                <div class="input-group-append">
+                                    <span class="input-group-text" style="cursor: pointer;" id="togglePassword2">
+                                        <i class="fas fa-eye" id="toggleIcon2"></i>
+                                    </span>
+                                </div>
                                 {% if form.password2.errors %}
                                     <div class="invalid-feedback">
                                         {% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}
@@ -83,4 +93,32 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready(function() {
+        function togglePasswordVisibility(toggleBtn, passwordInput, icon) {
+            const passwordField = $(passwordInput);
+            const passwordFieldType = passwordField.attr('type');
+            const toggleIcon = $(icon);
+            if (passwordFieldType == 'password') {
+                passwordField.attr('type', 'text');
+                toggleIcon.removeClass('fa-eye').addClass('fa-eye-slash');
+            } else {
+                passwordField.attr('type', 'password');
+                toggleIcon.removeClass('fa-eye-slash').addClass('fa-eye');
+            }
+        }
+
+        $('#togglePassword').click(function() {
+            togglePasswordVisibility(this, '#password', '#toggleIcon');
+        });
+
+        $('#togglePassword2').click(function() {
+            togglePasswordVisibility(this, '#password2', '#toggleIcon2');
+        });
+    });
+</script>
 {% endblock %}

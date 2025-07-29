@@ -237,7 +237,27 @@ def eligible_recipients_pdf():
         Penerima.skor_saw_ternormalisasi >= passing_grade
     ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
 
-    rendered_html = render_template('petugas/eligible_recipients_print.html', eligible_list=eligible_list, passing_grade=passing_grade, kuota=kuota)
+    eligible_list_data = []
+    cache = {}
+    for penerima_obj in eligible_list:
+        provinsi_name = _get_region_name(penerima_obj.provinsi, 'provinces.json', current_app.logger, cache)
+        kabupaten_name = _get_region_name(penerima_obj.kabupaten, f'regencies/{penerima_obj.provinsi}.json', current_app.logger, cache)
+        kecamatan_name = _get_region_name(penerima_obj.kecamatan, f'districts/{penerima_obj.kabupaten}.json', current_app.logger, cache)
+        desa_name = _get_region_name(penerima_obj.desa, f'villages/{penerima_obj.kecamatan}.json', current_app.logger, cache)
+
+        eligible_list_data.append({
+            'nama': penerima_obj.nama,
+            'provinsi': provinsi_name if provinsi_name else penerima_obj.provinsi,
+            'kabupaten': kabupaten_name if kabupaten_name else penerima_obj.kabupaten,
+            'kecamatan': kecamatan_name if kecamatan_name else penerima_obj.kecamatan,
+            'desa': desa_name if desa_name else penerima_obj.desa,
+            'pekerjaan': penerima_obj.pekerjaan,
+            'skor_saw_ternormalisasi': penerima_obj.skor_saw_ternormalisasi,
+            'status_kelayakan_knn': penerima_obj.status_kelayakan_knn
+        })
+        current_app.logger.info(f"DEBUG PDF: {penerima_obj.nama} - {provinsi_name}, {kabupaten_name}, {kecamatan_name}, {desa_name}")
+
+    rendered_html = render_template('petugas/eligible_recipients_print.html', eligible_list=eligible_list_data, passing_grade=passing_grade, kuota=kuota, now=datetime.now())
     pdf = weasyprint.HTML(string=rendered_html).write_pdf()
 
     response = make_response(pdf)

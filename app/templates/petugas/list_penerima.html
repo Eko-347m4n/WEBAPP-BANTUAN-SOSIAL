@@ -5,17 +5,19 @@
 {% block content %}
 <div class="container pt-4">
     <div class="card shadow-lg border-0">
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <h3 class="mb-0"><i class="fas fa-list"></i> {{ title }}</h3>
-            <div>
-                <a href="{{ url_for('petugas.mass_predict') }}" class="btn btn-warning mr-2"><i class="fas fa-sync-alt"></i> Prediksi Massal</a>
-                <a href="{{ url_for('petugas.tambah_penerima') }}" class="btn btn-success"><i class="fas fa-user-plus"></i> Tambah Penerima Baru</a>
+        <div class="card-header bg-info text-white">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                <h3 class="mb-2 mb-md-0"><i class="fas fa-list"></i> {{ title }}</h3>
+                <div class="text-md-right">
+                    <a href="{{ url_for('petugas.mass_predict') }}" class="btn btn-warning btn-sm mr-2 mb-1 mb-md-0"><i class="fas fa-sync-alt"></i> Prediksi Massal</a>
+                    <a href="{{ url_for('petugas.tambah_penerima') }}" class="btn btn-success btn-sm mb-1 mb-md-0"><i class="fas fa-user-plus"></i> Tambah Penerima Baru</a>
+                </div>
             </div>
         </div>
         <div class="card-body">
             {% if penerima_list and penerima_list|length > 0 %}
             <div class="table-responsive">
-                <table class="table table-striped table-hover table-bordered table-sm" style="table-layout: fixed; width: 100%;">
+                <table class="table table-striped table-hover table-bordered table-sm" id="penerimaTable" style="display:none;">
                     <thead class="thead-dark">
                         <tr>
                             <th scope="col" style="width: 5%;">No.</th>
@@ -28,7 +30,7 @@
                     <tbody>
                         {% for penerima in penerima_list %}
                         <tr>
-                            <td>{{ loop.index }}</td>
+                            <td></td>
                             <td>{{ penerima.nama }}</td>
                             <td>{{ penerima.pekerjaan }}</td>
                             <td class="text-center">
@@ -39,17 +41,10 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <div class="dropdown">
-                                    <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" id="dropdownMenuButton-{{ penerima.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        Aksi
-                                    </button>
-                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton-{{ penerima.id }}">
-                                        <a class="dropdown-item" href="{{ url_for('petugas.edit_penerima', penerima_id=penerima.id) }}"><i class="fas fa-edit mr-2"></i>Edit</a>
-                                        <button class="dropdown-item text-danger" type="button" data-toggle="modal" data-target="#deletePenerimaModal-{{ penerima.id }}">
-                                            <i class="fas fa-trash mr-2"></i>Hapus
-                                        </button>
-                                    </div>
-                                </div>
+                                <a href="{{ url_for('petugas.edit_penerima', penerima_id=penerima.id) }}" class="btn btn-info btn-sm" data-toggle="tooltip" title="Edit Data"><i class="fas fa-edit"></i></a>
+                                <button class="btn btn-danger btn-sm" type="button" data-toggle="modal" data-target="#deletePenerimaModal-{{ penerima.id }}" data-toggle="tooltip" title="Hapus Data">
+                                    <i class="fas fa-trash"></i>
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -57,9 +52,13 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info text-center" role="alert">
-                <i class="fas fa-info-circle fa-2x mb-2"></i><br>
-                Belum ada data penerima yang terdaftar. <a href="{{ url_for('petugas.tambah_penerima') }}" class="alert-link">Tambahkan sekarang</a>.
+            <div class="alert alert-info text-center p-5">
+                <i class="fas fa-info-circle fa-3x mb-3"></i>
+                <h4>Belum Ada Data Penerima</h4>
+                <p>Saat ini belum ada data penerima yang terdaftar.</p>
+                <a href="{{ url_for('petugas.tambah_penerima') }}" class="btn btn-success mt-3">
+                    <i class="fas fa-user-plus"></i> Tambahkan Sekarang
+                </a>
             </div>
             {% endif %}
         </div>
@@ -96,7 +95,28 @@
 {{ super() }}
 <script>
     $(document).ready(function() {
-        $('.dropdown-toggle').dropdown();
+        var table = $('#penerimaTable').DataTable({
+            "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Indonesian.json" },
+            "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                   '<"row"<"col-sm-12"tr>>' +
+                   '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            "responsive": true,
+            "columnDefs": [ {
+                "searchable": false,
+                "orderable": false,
+                "targets": 0
+            } ],
+            "order": [[ 1, 'asc' ]],
+            "initComplete": function(settings, json) {
+                $('#penerimaTable').show();
+            }
+        });
+
+        table.on( 'order.dt search.dt', function () {
+            table.column(0, {search:'applied', order:'applied'}).nodes().each( function (cell, i) {
+                cell.innerHTML = i+1;
+            } );
+        } ).draw();
     });
 </script>
 {% endblock scripts %}

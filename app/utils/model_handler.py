@@ -3,6 +3,7 @@ import joblib
 import os
 import requests
 from flask import current_app
+from datetime import datetime
 
 # ===============================
 # 0. Konfigurasi Global & Kriteria
@@ -108,7 +109,8 @@ def predict_individual_status(penerima_obj, knn_model, passing_grade, logger, ca
         "skor_saw_ternormalisasi": round(skor_saw_individu, 4),
         "status_kelayakan_knn": knn_prediction,
         "passing_grade_digunakan_saw": passing_grade,
-        "alasan": alasan_detail
+        "alasan": alasan_detail,
+        "timestamp": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     }
 
 # ===============================

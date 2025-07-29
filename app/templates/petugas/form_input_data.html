@@ -2,6 +2,76 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block head_extra %}
+<style>
+    .form-step {
+        display: none;
+    }
+    .form-step.active {
+        display: block;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 2rem;
+    }
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        flex-grow: 1;
+    }
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 2px solid #ced4da;
+        z-index: 1;
+    }
+    .step.active .step-icon, .step.completed .step-icon {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    .step-label {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    .step.active .step-label, .step.completed .step-label {
+        font-weight: bold;
+        color: #007bff;
+    }
+    .step-connector {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: #ced4da;
+        transform: translateY(-50%);
+        z-index: 0;
+    }
+    .step:first-child .step-connector {
+        left: 50%;
+        width: 50%;
+    }
+    .step:last-child .step-connector {
+        width: 0;
+    }
+    .step.completed .step-connector {
+        background-color: #007bff;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container pt-4">
     <div class="row justify-content-center">
@@ -11,129 +81,160 @@
                     <h3 class="mb-0"><i class="fas fa-user-plus"></i> {{ title }}</h3>
                 </div>
                 <div class="card-body p-4">
-                    <form method="POST" action="" enctype="multipart/form-data" novalidate>
+                    <div id="wizard-stepper" class="step-indicator">
+                        <div class="step active" data-step="1">
+                            <div class="step-icon">1</div>
+                            <div class="step-label">Data Diri</div>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="step" data-step="2">
+                            <div class="step-icon">2</div>
+                            <div class="step-label">Kriteria</div>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="step" data-step="3">
+                            <div class="step-icon">3</div>
+                            <div class="step-label">Bantuan Lain</div>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="step" data-step="4">
+                            <div class="step-icon">4</div>
+                            <div class="step-label">Dokumen</div>
+                        </div>
+                    </div>
+
+                    <form id="wizard-form" method="POST" action="" enctype="multipart/form-data" novalidate>
                         {{ form.hidden_tag() }}
 
-                        <fieldset class="mb-4">
-                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Data Diri Penerima</legend>
-                            <div class="form-group">
-                                {{ form.nama.label(class="form-control-label") }}
-                                {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), placeholder="Nama Lengkap Sesuai KTP" + (" readonly" if is_edit else "")) }}
-                                {% if form.nama.errors %}<div class="invalid-feedback">{% for error in form.nama.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label for="provinsi">Provinsi</label>
-                                    <select id="provinsi" name="provinsi" class="form-control custom-select"{% if is_edit %} disabled{% endif %}>
-                                        <option selected>-- Pilih Provinsi --</option>
-                                    </select>
+                        <div class="form-step active" data-step="1">
+                            <fieldset class="mb-4">
+                                <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Data Diri Penerima</legend>
+                                <div class="form-group">
+                                    {{ form.nama.label(class="form-control-label") }}
+                                    {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), placeholder="Nama Lengkap Sesuai KTP" + (" readonly" if is_edit else "")) }}
+                                    {% if form.nama.errors %}<div class="invalid-feedback">{% for error in form.nama.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
                                 </div>
-                                <div class="form-group col-md-6">
-                                    <label for="kabupaten">Kabupaten/Kota</label>
-                                    <select id="kabupaten" name="kabupaten" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
-                                        <option selected>-- Pilih Kabupaten/Kota --</option>
-                                    </select>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="provinsi">Provinsi</label>
+                                        <select id="provinsi" name="provinsi" class="form-control custom-select"{% if is_edit %} disabled{% endif %}>
+                                            <option selected>-- Pilih Provinsi --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="kabupaten">Kabupaten/Kota</label>
+                                        <select id="kabupaten" name="kabupaten" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
+                                            <option selected>-- Pilih Kabupaten/Kota --</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label for="kecamatan">Kecamatan</label>
-                                    <select id="kecamatan" name="kecamatan" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
-                                        <option selected>-- Pilih Kecamatan --</option>
-                                    </select>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="kecamatan">Kecamatan</label>
+                                        <select id="kecamatan" name="kecamatan" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
+                                            <option selected>-- Pilih Kecamatan --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="desa">Desa</label>
+                                        <select id="desa" name="desa" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
+                                            <option selected>-- Pilih Desa --</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="form-group col-md-6">
-                                    <label for="desa">Desa</label>
-                                    <select id="desa" name="desa" class="form-control custom-select" disabled{% if is_edit %} disabled{% endif %}>
-                                        <option selected>-- Pilih Desa --</option>
-                                    </select>
+                                <div class="form-group">
+                                    {{ form.pekerjaan.label(class="form-control-label") }}
+                                    {{ form.pekerjaan(class="form-control custom-select" + (" is-invalid" if form.pekerjaan.errors else "")) }}
+                                    {% if form.pekerjaan.errors %}<div class="invalid-feedback">{% for error in form.pekerjaan.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                {{ form.pekerjaan.label(class="form-control-label") }}
-                                {{ form.pekerjaan(class="form-control custom-select" + (" is-invalid" if form.pekerjaan.errors else "")) }}
-                                {% if form.pekerjaan.errors %}<div class="invalid-feedback">{% for error in form.pekerjaan.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                            </div>
-                        </fieldset>
+                            </fieldset>
+                        </div>
 
-                        <fieldset class="mb-4">
-                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Kriteria kelayakan</legend>
-                            <p class="text-muted small">Pilih "Ya" jika warga memenuhi salah satu kondisi berikut.</p>
-                            
-                            <div class="form-group">
-                                {{ form.dtks.label(class="form-control-label") }}
-                                {{ form.dtks(class="form-control custom-select" + (" is-invalid" if form.dtks.errors else "")) }}
-                                {% if form.dtks.errors %}<div class="invalid-feedback">{% for error in form.dtks.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    {{ form.keluarga_miskin_ekstrem.label(class="form-control-label") }}
-                                    {{ form.keluarga_miskin_ekstrem(class="form-control custom-select") }}
+                        <div class="form-step" data-step="2">
+                            <fieldset class="mb-4">
+                                <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Kriteria kelayakan</legend>
+                                <p class="text-muted small">Pilih "Ya" jika warga memenuhi salah satu kondisi berikut.</p>
+                                
+                                <div class="form-group">
+                                    {{ form.dtks.label(class="form-control-label") }}
+                                    {{ form.dtks(class="form-control custom-select" + (" is-invalid" if form.dtks.errors else "")) }}
+                                    {% if form.dtks.errors %}<div class="invalid-feedback">{% for error in form.dtks.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
                                 </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.kehilangan_mata_pencaharian.label(class="form-control-label") }}
-                                    {{ form.kehilangan_mata_pencaharian(class="form-control custom-select") }}
+                                
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        {{ form.keluarga_miskin_ekstrem.label(class="form-control-label") }}
+                                        {{ form.keluarga_miskin_ekstrem(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.kehilangan_mata_pencaharian.label(class="form-control-label") }}
+                                        {{ form.kehilangan_mata_pencaharian(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.tidak_bekerja.label(class="form-control-label") }}
+                                        {{ form.tidak_bekerja(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.difabel.label(class="form-control-label") }}
+                                        {{ form.difabel(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.penyakit_kronis.label(class="form-control-label") }}
+                                        {{ form.penyakit_kronis(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.rumah_tangga_tunggal_lansia.label(class="form-control-label") }}
+                                        {{ form.rumah_tangga_tunggal_lansia(class="form-control custom-select") }}
+                                    </div>
                                 </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.tidak_bekerja.label(class="form-control-label") }}
-                                    {{ form.tidak_bekerja(class="form-control custom-select") }}
-                                </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.difabel.label(class="form-control-label") }}
-                                    {{ form.difabel(class="form-control custom-select") }}
-                                </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.penyakit_kronis.label(class="form-control-label") }}
-                                    {{ form.penyakit_kronis(class="form-control custom-select") }}
-                                </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.rumah_tangga_tunggal_lansia.label(class="form-control-label") }}
-                                    {{ form.rumah_tangga_tunggal_lansia(class="form-control custom-select") }}
-                                </div>
-                            </div>
-                        </fieldset>
+                            </fieldset>
+                        </div>
 
-                        <fieldset class="mb-4">
-                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Bantuan Sosial Lainnya</legend>
-                            <p class="text-muted small">Pilih "Ya" jika warga sudah menerima salah satu dari bantuan berikut.</p>
-                             <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    {{ form.pkh.label(class="form-control-label") }}
-                                    {{ form.pkh(class="form-control custom-select") }}
+                        <div class="form-step" data-step="3">
+                            <fieldset class="mb-4">
+                                <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Bantuan Sosial Lainnya</legend>
+                                <p class="text-muted small">Pilih "Ya" jika warga sudah menerima salah satu dari bantuan berikut.</p>
+                                 <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        {{ form.pkh.label(class="form-control-label") }}
+                                        {{ form.pkh(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.kartu_pra_kerja.label(class="form-control-label") }}
+                                        {{ form.kartu_pra_kerja(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.bst.label(class="form-control-label") }}
+                                        {{ form.bst(class="form-control custom-select") }}
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        {{ form.bansos_lainnya.label(class="form-control-label") }}
+                                        {{ form.bansos_lainnya(class="form-control custom-select") }}
+                                    </div>
                                 </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.kartu_pra_kerja.label(class="form-control-label") }}
-                                    {{ form.kartu_pra_kerja(class="form-control custom-select") }}
-                                </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.bst.label(class="form-control-label") }}
-                                    {{ form.bst(class="form-control custom-select") }}
-                                </div>
-                                <div class="form-group col-md-6">
-                                    {{ form.bansos_lainnya.label(class="form-control-label") }}
-                                    {{ form.bansos_lainnya(class="form-control custom-select") }}
-                                </div>
-                            </div>
-                        </fieldset>
+                            </fieldset>
+                        </div>
 
-                        <fieldset class="mb-4">
-                            <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Unggah Dokumen Pendukung</legend>
-                            <div class="form-group">
-                                {{ form.dokumen_pendukung.label(class="form-control-label") }}
-                                <div class="custom-file">
-                                    {{ form.dokumen_pendukung(class="custom-file-input" + (" is-invalid" if form.dokumen_pendukung.errors else "")) }}
-                                    <label class="custom-file-label" for="{{ form.dokumen_pendukung.id }}">Pilih file...</label>
-                                    {% if form.dokumen_pendukung.errors %}<div class="invalid-feedback d-block">{% for error in form.dokumen_pendukung.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                        <div class="form-step" data-step="4">
+                            <fieldset class="mb-4">
+                                <legend class="h5 font-weight-bold border-bottom pb-2 mb-3">Unggah Dokumen Pendukung</legend>
+                                <div class="form-group">
+                                    {{ form.dokumen_pendukung.label(class="form-control-label") }}
+                                    <div class="custom-file">
+                                        {{ form.dokumen_pendukung(class="custom-file-input" + (" is-invalid" if form.dokumen_pendukung.errors else "")) }}
+                                        <label class="custom-file-label" for="{{ form.dokumen_pendukung.id }}">Pilih file...</label>
+                                        {% if form.dokumen_pendukung.errors %}<div class="invalid-feedback d-block">{% for error in form.dokumen_pendukung.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+                                    </div>
+                                    <small class="form-text text-muted">Opsional. Format yang diizinkan: PDF, JPG, PNG. Maksimum 2MB.</small>
                                 </div>
-                                <small class="form-text text-muted">Opsional. Format yang diizinkan: PDF, JPG, PNG. Maksimum 2MB.</small>
-                            </div>
-                        </fieldset>
+                            </fieldset>
+                        </div>
                         
                         <hr>
-                        <div class="d-flex justify-content-end">
-                            <a href="{{ url_for('petugas.list_penerima') }}" class="btn btn-secondary mr-2">Batal</a>
-                            {{ form.submit(class="btn btn-success") }}
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" id="prev-btn" style="display: none;">Sebelumnya</button>
+                            <button type="button" class="btn btn-primary" id="next-btn">Berikutnya</button>
+                            {{ form.submit(class="btn btn-success", id="submit-btn", style="display: none;") }}
                         </div>
                     </form>
                 </div>
@@ -244,6 +345,52 @@
                 populateSelect(desaSelect, apiBaseUrl + `villages/${kecamatanId}.json`);
             }
         });
+
+        // Wizard Form Logic
+        let currentStep = 1;
+        const formSteps = document.querySelectorAll('.form-step');
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        const stepper = document.getElementById('wizard-stepper');
+
+        function updateButtons() {
+            prevBtn.style.display = currentStep === 1 ? 'none' : 'inline-block';
+            nextBtn.style.display = currentStep === formSteps.length ? 'none' : 'inline-block';
+            submitBtn.style.display = currentStep === formSteps.length ? 'inline-block' : 'none';
+        }
+
+        function goToStep(stepNumber) {
+            formSteps.forEach(step => step.classList.remove('active'));
+            document.querySelector(`.form-step[data-step="${stepNumber}"]`).classList.add('active');
+            
+            stepper.querySelectorAll('.step').forEach(step => step.classList.remove('active', 'completed'));
+            for (let i = 1; i <= stepNumber; i++) {
+                const step = stepper.querySelector(`.step[data-step="${i}"]`);
+                if (i < stepNumber) {
+                    step.classList.add('completed');
+                } else {
+                    step.classList.add('active');
+                }
+            }
+
+            currentStep = stepNumber;
+            updateButtons();
+        }
+
+        nextBtn.addEventListener('click', () => {
+            if (currentStep < formSteps.length) {
+                goToStep(currentStep + 1);
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentStep > 1) {
+                goToStep(currentStep - 1);
+            }
+        });
+
+        goToStep(1);
     });
 </script>
 {% endblock %}
