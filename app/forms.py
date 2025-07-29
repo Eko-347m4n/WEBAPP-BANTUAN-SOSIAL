@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
+from flask_wtf.file import FileField, FileAllowed, FileSize
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, TextAreaField, HiddenField
-from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length, NumberRange
+from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length, NumberRange, Optional
 from app.database.models import User
 
 class LoginForm(FlaskForm):
@@ -35,9 +35,9 @@ class EditUserForm(FlaskForm):
     # Username tidak diubah, hanya ditampilkan atau di-pass sebagai hidden field jika perlu
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=120)])
     password = PasswordField('Password Baru (kosongkan jika tidak ingin mengubah)',
-                             validators=[EqualTo('password2', message='Password harus sama.'), Length(min=6, max=128, message="Password minimal 6 karakter."), DataRequired(message="Password tidak boleh kosong jika diisi.")],
+                             validators=[Optional(), EqualTo('password2', message='Password harus sama.'), Length(min=6, message="Password minimal 6 karakter.")],
                              render_kw={"placeholder": "Kosongkan jika tidak ingin mengubah"})
-    password2 = PasswordField('Konfirmasi Password Baru')
+    password2 = PasswordField('Konfirmasi Password Baru', validators=[Optional()])
     # Role tidak diubah melalui form ini oleh admin, untuk menjaga integritas.
     submit = SubmitField('Update User')
 
@@ -53,12 +53,16 @@ class IndexPredictionForm(FlaskForm):
     submit = SubmitField('Cari Data')
 
 class SettingForm(FlaskForm):
-    passing_grade = IntegerField('Passing Grade', validators=[DataRequired(), NumberRange(min=0)])
+    passing_grade = FloatField('Passing Grade', validators=[DataRequired(), NumberRange(min=0)])
     kuota = IntegerField('Kuota', validators=[DataRequired(), NumberRange(min=1)])
     submit = SubmitField('Simpan')
 
 class PenerimaForm(FlaskForm):
     nama = StringField('Nama Lengkap', validators=[DataRequired(), Length(max=150)])
+    provinsi = SelectField('Provinsi', choices=[('', '-- Pilih Provinsi --')], validators=[DataRequired(message="Pilih provinsi.")])
+    kabupaten = SelectField('Kabupaten/Kota', choices=[('', '-- Pilih Kabupaten/Kota --')], validators=[DataRequired(message="Pilih kabupaten/kota.")])
+    kecamatan = SelectField('Kecamatan', choices=[('', '-- Pilih Kecamatan --')], validators=[DataRequired(message="Pilih kecamatan.")])
+    desa = SelectField('Desa', choices=[('', '-- Pilih Desa --')], validators=[DataRequired(message="Pilih desa.")])
     pekerjaan = SelectField('Pekerjaan', choices=[
         ('', '-- Pilih Pekerjaan --'),
         ('PNS', 'PNS'),
@@ -68,7 +72,7 @@ class PenerimaForm(FlaskForm):
         ('Nelayan', 'Nelayan'),
         ('Lainnya', 'Lainnya')
     ], validators=[DataRequired()])
-    dokumen_pendukung = FileField('Dokumen Pendukung', validators=[FileAllowed(['jpg', 'png', 'pdf'], 'Hanya gambar dan PDF!')])
+    dokumen_pendukung = FileField('Dokumen Pendukung', validators=[FileAllowed(['jpg', 'png', 'pdf'], 'Hanya gambar dan PDF!'), FileSize(max_size=2*1024*1024, message='Ukuran file tidak boleh lebih dari 2MB.')])
 
     # --- KRITERIA ---
     boolean_choices_with_prompt = [

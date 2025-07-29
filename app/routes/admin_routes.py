@@ -76,6 +76,9 @@ def edit_user(user_id):
         user.email = form.email.data
         if form.password.data: # Jika password diisi, maka diubah
             user.set_password(form.password.data)
+        elif form.password.errors: # Jika password tidak diisi tapi ada error (misal password2 tidak cocok)
+            # Jangan lakukan apa-apa, biarkan error ditampilkan oleh form
+            pass
         db.session.commit()
         flash('Data user berhasil diperbarui.', 'success')
         return redirect(url_for('admin.users'))
@@ -103,7 +106,7 @@ def settings():
     form = SettingForm()
     setting = Setting.query.first()
     if not setting:
-        setting = Setting(passing_grade=10, kuota=50)
+        setting = Setting(passing_grade=0.5, kuota=50) # Default value for float
         db.session.add(setting)
         db.session.commit()
 

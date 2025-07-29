@@ -1,131 +1,138 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Laporan Penerima Layak - BansosApp</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Laporan Penerima Layak - Sosial Kita App</title>
     <style>
-        @page {
-            size: A4;
-            margin: 1in;
-            @bottom-center {
-                content: "Dicetak pada: {{ now.strftime('%d-%m-%Y %H:%M:%S') }} - © BansosApp";
-                font-size: 0.8rem;
-                color: #6c757d;
-                border-top: 1px solid #dee2e6;
-                width: 100%;
-                padding-top: 0.5rem;
-                text-align: center;
-            }
+      @page {
+        size: A4;
+        margin: 1in;
+        @bottom-center {
+          content: "Dicetak pada: {{ now.strftime('%d-%m-%Y %H:%M:%S') }} - © Sosial Kita App";
+          font-size: 0.8rem;
+          color: #6c757d;
+          border-top: 1px solid #dee2e6;
+          width: 100%;
+          padding-top: 0.5rem;
+          text-align: center;
         }
-        body {
-            font-family: 'Roboto', sans-serif;
-            font-size: 10pt;
-            color: #333;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 1rem;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-            color: #007bff;
-        }
-        .header p {
-            margin: 0;
-            font-size: 1rem;
-            color: #6c757d;
-        }
-        .criteria {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            border-left: 5px solid #007bff;
-        }
-        .criteria p {
-            margin: 0.2rem 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1.5rem;
-        }
-        th, td {
-            border: 1px solid #dee2e6;
-            padding: 0.6rem;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-            font-weight: 700;
-            color: #495057;
-        }
-        tbody tr:nth-child(odd) {
-            background-color: #f8f9fa;
-        }
-        .badge {
-            padding: 0.3em 0.6em;
-            border-radius: 0.25rem;
-            font-weight: 700;
-            color: #fff;
-        }
-        .badge-success {
-            background-color: #28a745;
-        }
-        .badge-danger {
-            background-color: #dc3545;
-        }
+      }
+      body {
+        font-family: "Roboto", sans-serif;
+        font-size: 10pt;
+        color: #333;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 1rem;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        color: #007bff;
+      }
+      .header p {
+        margin: 0;
+        font-size: 1rem;
+        color: #6c757d;
+      }
+      .criteria {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-left: 5px solid #007bff;
+      }
+      .criteria p {
+        margin: 0.2rem 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+      }
+      th,
+      td {
+        border: 1px solid #dee2e6;
+        padding: 0.6rem;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+        font-weight: 700;
+        color: #495057;
+      }
+      tbody tr:nth-child(odd) {
+        background-color: #f8f9fa;
+      }
+      .badge {
+        padding: 0.3em 0.6em;
+        border-radius: 0.25rem;
+        font-weight: 700;
+        color: #fff;
+      }
+      .badge-success {
+        background-color: #28a745;
+      }
+      .badge-danger {
+        background-color: #dc3545;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="header">
-        <h1>BansosApp</h1>
-        <p>Laporan Resmi Daftar Penerima Bantuan Layak</p>
+      <h1>Sosial Kita App</h1>
+      <p>Laporan Resmi Daftar Penerima Bantuan Layak</p>
     </div>
 
     <div class="criteria">
-        <p>Laporan ini dibuat berdasarkan kriteria seleksi berikut:</p>
-        <p><strong>Passing Grade (Nilai Ambang Batas):</strong> {{ passing_grade }}</p>
-        <p><strong>Kuota Maksimal Penerima:</strong> {{ kuota }}</p>
+      <p>Laporan ini dibuat berdasarkan kriteria seleksi berikut:</p>
+      <p>
+        <strong>Passing Grade (Nilai Ambang Batas):</strong> {{ passing_grade }}
+      </p>
+      <p><strong>Kuota Maksimal Penerima:</strong> {{ kuota }}</p>
     </div>
 
     <h3>Hasil Seleksi</h3>
     <table>
-        <thead>
-            <tr>
-                <th>No.</th>
-                <th>Nama Lengkap</th>
-                <th>Alamat</th>
-                <th>Pekerjaan</th>
-                <th>Skor SAW</th>
-                <th>Status KNN</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for penerima in eligible_list %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ penerima.nama }}</td>
-                <td>{{ penerima['desa'] }}, {{ penerima['kecamatan'] }}, {{ penerima['kabupaten'] }}, {{ penerima['provinsi'] }}</td>
-                <td>{{ penerima.pekerjaan }}</td>
-                <td>{{ penerima.skor_saw_ternormalisasi | round(3) }}</td>
-                <td>
-                    {% if penerima.status_kelayakan_knn == 'Layak' %}
-                        <span class="badge badge-success">Layak</span>
-                    {% else %}
-                        <span class="badge badge-danger">Tidak Layak</span>
-                    {% endif %}
-                </td>
-            </tr>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Nama Lengkap</th>
+          <th>Alamat</th>
+          <th>Pekerjaan</th>
+          <th>Skor SAW</th>
+          <th>Status KNN</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for penerima in eligible_list %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ penerima.nama }}</td>
+          <td>
+            {{ penerima['desa'] }}, {{ penerima['kecamatan'] }}, {{
+            penerima['kabupaten'] }}, {{ penerima['provinsi'] }}
+          </td>
+          <td>{{ penerima.pekerjaan }}</td>
+          <td>{{ penerima.skor_saw_ternormalisasi | round(3) }}</td>
+          <td>
+            {% if penerima.status_kelayakan_knn == 'Layak' %}
+            <span class="badge badge-success">Layak</span>
             {% else %}
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 2rem;">Tidak ada penerima yang memenuhi kriteria.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+            <span class="badge badge-danger">Tidak Layak</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 2rem">
+            Tidak ada penerima yang memenuhi kriteria.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
-
-    </body>
+  </body>
 </html>

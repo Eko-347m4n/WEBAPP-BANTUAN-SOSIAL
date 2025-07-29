@@ -46,7 +46,7 @@ def prediksi():
     prediction = None
     setting = Setting.query.first()
     if not setting:
-        setting = Setting(passing_grade=10, kuota=50)
+        setting = Setting(passing_grade=0.5, kuota=50) # Default value for float
         db.session.add(setting)
         db.session.commit()
 
@@ -70,8 +70,7 @@ def prediksi():
             penerima_obj=penerima_obj,
             knn_model=knn_model,
             passing_grade=passing_grade,
-            logger=current_app.logger,
-            cache={}
+            logger=current_app.logger
         )
 
         if 'error' in prediction:
@@ -94,8 +93,7 @@ def run_mass_prediction_in_background(app, all_penerima_ids, passing_grade, mode
                     penerima_obj=penerima_obj,
                     knn_model=knn_model,
                     passing_grade=passing_grade,
-                    logger=app.logger,
-                    cache=cache
+                    logger=app.logger
                 )
                 if 'error' not in prediction_result:
                     penerima_obj.status_kelayakan_knn = prediction_result['status_kelayakan_knn']
@@ -147,12 +145,9 @@ def mass_predict():
 
         setting = Setting.query.first()
         if not setting:
-            setting = Setting()
+            setting = Setting(passing_grade=0.5, kuota=50) # Default value for float
             db.session.add(setting)
-        
-        setting.passing_grade = form.passing_grade.data
-        setting.kuota = form.kuota.data
-        db.session.commit()
+            db.session.commit()
 
         all_penerima_ids = [p.id for p in Penerima.query.with_entities(Penerima.id).all()]
         model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
@@ -207,19 +202,23 @@ def eligible_recipients():
         Penerima.skor_saw_ternormalisasi >= passing_grade
     ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
 
-    # Convert numerical IDs to text names for display
-    cache = {} # Initialize cache for this request
-    for penerima in eligible_list:
-        original_provinsi_id = penerima.provinsi
-        original_kabupaten_id = penerima.kabupaten
-        original_kecamatan_id = penerima.kecamatan
+    eligible_list_data = []
+    for penerima_obj in eligible_list:
+        provinsi_name = _get_region_name(penerima_obj.provinsi, 'provinces.json', current_app.logger)
+        kabupaten_name = _get_region_name(penerima_obj.kabupaten, f'regencies/{penerima_obj.provinsi}.json', current_app.logger)
+        kecamatan_name = _get_region_name(penerima_obj.kecamatan, f'districts/{penerima_obj.kabupaten}.json', current_app.logger)
+        desa_name = _get_region_name(penerima_obj.desa, f'villages/{penerima_obj.kecamatan}.json', current_app.logger)
 
-        penerima.provinsi = _get_region_name(original_provinsi_id, 'provinces.json', current_app.logger, cache)
-        penerima.kabupaten = _get_region_name(original_kabupaten_id, f'regencies/{original_provinsi_id}.json', current_app.logger, cache)
-        penerima.kecamatan = _get_region_name(original_kecamatan_id, f'districts/{original_kabupaten_id}.json', current_app.logger, cache)
-        penerima.desa = _get_region_name(penerima.desa, f'villages/{original_kecamatan_id}.json', current_app.logger, cache)
-
-    return render_template('petugas/eligible_recipients.html', title='Daftar Penerima Layak', eligible_list=eligible_list, passing_grade=passing_grade, kuota=kuota)
+        eligible_list_data.append({
+            'nama': penerima_obj.nama,
+            'provinsi': provinsi_name if provinsi_name else penerima_obj.provinsi,
+            'kabupaten': kabupaten_name if kabupaten_name else penerima_obj.kabupaten,
+            'kecamatan': kecamatan_name if kecamatan_name else penerima_obj.kecamatan,
+            'desa': desa_name if desa_name else penerima_obj.desa,
+            'pekerjaan': penerima_obj.pekerjaan,
+            'skor_saw_ternormalisasi': penerima_obj.skor_saw_ternormalisasi,
+            'status_kelayakan_knn': penerima_obj.status_kelayakan_knn
+        })
 
 @petugas_bp.route('/eligible_recipients/pdf')
 @login_required
@@ -238,12 +237,11 @@ def eligible_recipients_pdf():
     ).order_by(Penerima.skor_saw_ternormalisasi.desc()).limit(kuota).all()
 
     eligible_list_data = []
-    cache = {}
     for penerima_obj in eligible_list:
-        provinsi_name = _get_region_name(penerima_obj.provinsi, 'provinces.json', current_app.logger, cache)
-        kabupaten_name = _get_region_name(penerima_obj.kabupaten, f'regencies/{penerima_obj.provinsi}.json', current_app.logger, cache)
-        kecamatan_name = _get_region_name(penerima_obj.kecamatan, f'districts/{penerima_obj.kabupaten}.json', current_app.logger, cache)
-        desa_name = _get_region_name(penerima_obj.desa, f'villages/{penerima_obj.kecamatan}.json', current_app.logger, cache)
+        provinsi_name = _get_region_name(penerima_obj.provinsi, 'provinces.json', current_app.logger)
+        kabupaten_name = _get_region_name(penerima_obj.kabupaten, f'regencies/{penerima_obj.provinsi}.json', current_app.logger)
+        kecamatan_name = _get_region_name(penerima_obj.kecamatan, f'districts/{penerima_obj.kabupaten}.json', current_app.logger)
+        desa_name = _get_region_name(penerima_obj.desa, f'villages/{penerima_obj.kecamatan}.json', current_app.logger)
 
         eligible_list_data.append({
             'nama': penerima_obj.nama,
@@ -273,14 +271,14 @@ def tambah_penerima():
     if form.validate_on_submit():
         penerima = Penerima(
             nama=form.nama.data,
-            provinsi=request.form.get('provinsi'),
-            kabupaten=request.form.get('kabupaten'),
-            kecamatan=request.form.get('kecamatan'),
-            desa=request.form.get('desa'),
+            provinsi=form.provinsi.data,
+            kabupaten=form.kabupaten.data,
+            kecamatan=form.kecamatan.data,
+            desa=form.desa.data,
             pekerjaan=form.pekerjaan.data,
             dtks=str_to_bool(form.dtks.data),
             keluarga_miskin_ekstrem=str_to_bool(form.keluarga_miskin_ekstrem.data),
-            kehilangan_mata_pencaharian=str_to_bool(form.kehilangan_mata_pencaharian.data),
+            kehilangan_mata_pencarian=str_to_bool(form.kehilangan_mata_pencaharian.data),
             tidak_bekerja=str_to_bool(form.tidak_bekerja.data),
             difabel=str_to_bool(form.difabel.data),
             penyakit_kronis=str_to_bool(form.penyakit_kronis.data),
@@ -319,17 +317,7 @@ def edit_penerima(penerima_id):
     form = PenerimaForm(obj=penerima)
 
     if form.validate_on_submit():
-        original_provinsi = penerima.provinsi
-        original_kabupaten = penerima.kabupaten
-        original_kecamatan = penerima.kecamatan
-        original_desa = penerima.desa
-
         form.populate_obj(penerima)
-
-        penerima.provinsi = original_provinsi
-        penerima.kabupaten = original_kabupaten
-        penerima.kecamatan = original_kecamatan
-        penerima.desa = original_desa
 
         penerima.dtks = str_to_bool(form.dtks.data)
         penerima.keluarga_miskin_ekstrem = str_to_bool(form.keluarga_miskin_ekstrem.data)
@@ -367,6 +355,12 @@ def edit_penerima(penerima_id):
     form.kartu_pra_kerja.data = str(penerima.kartu_pra_kerja)
     form.bst.data = str(penerima.bst)
     form.bansos_lainnya.data = str(penerima.bansos_lainnya)
+
+    # Set data for region fields from the object
+    form.provinsi.data = penerima.provinsi
+    form.kabupaten.data = penerima.kabupaten
+    form.kecamatan.data = penerima.kecamatan
+    form.desa.data = penerima.desa
 
     return render_template('petugas/form_input_data.html', title='Edit Data Penerima', form=form, is_edit=True)
 

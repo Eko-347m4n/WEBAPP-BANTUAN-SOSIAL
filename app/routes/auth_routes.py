@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
+from urllib.parse import urlparse
 from app.database.models import User, Setting, Penerima
 from app import db
 from app.forms import LoginForm, RegistrationForm, IndexPredictionForm
@@ -15,7 +16,7 @@ def index():
     prediction = None
     setting = Setting.query.first()
     if not setting:
-        setting = Setting(passing_grade=10, kuota=50)
+        setting = Setting(passing_grade=0.5, kuota=50) # Default value for float
         db.session.add(setting)
         db.session.commit()
 
@@ -32,11 +33,9 @@ def index():
             flash(f'Individu dengan nama \'{nama}\' tidak ditemukan.', 'danger')
             return redirect(url_for('auth.index'))
 
-        model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../models/knn_model.pkl')
-        try:
-            knn_model = joblib.load(model_path)
-        except Exception as e:
-            flash(f'Gagal memuat model prediksi: {str(e)}', 'danger')
+        knn_model = current_app.extensions.get('knn_model')
+        if knn_model is None:
+            flash('Model prediksi belum dimuat. Harap hubungi administrator.', 'danger')
             return redirect(url_for('auth.index'))
 
         passing_grade = setting.passing_grade
@@ -44,8 +43,7 @@ def index():
             penerima_obj=penerima_obj,
             knn_model=knn_model,
             passing_grade=passing_grade,
-            logger=current_app.logger,
-            cache={}
+            logger=current_app.logger
         )
 
         if 'error' in prediction_result:
@@ -80,8 +78,7 @@ def login():
             flash('Login berhasil!', 'success') # Pindahkan flash message ke sini
             
             next_page = request.args.get('next')
-            # Pastikan next_page aman dan merupakan path lokal
-            if next_page and next_page.startswith('/'):
+            if next_page and urlparse(next_page).netloc == '' and urlparse(next_page).scheme == '':
                 return redirect(next_page)
             else:
                 # Jika tidak ada next_page yang valid, arahkan berdasarkan peran

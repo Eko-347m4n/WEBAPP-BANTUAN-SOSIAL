@@ -23,31 +23,33 @@ MODEL_PATH = os.path.join(APP_ROOT_DIR, 'models', 'knn_model.pkl')
 
 API_WILAYAH_BASE_URL = "https://www.emsifa.com/api-wilayah-indonesia/api/"
 
-def _get_region_name(region_id, endpoint, logger, cache):
+_region_name_cache = {}
+
+def _get_region_name(region_id, endpoint, logger):
     if not region_id:
         return None
     # Check cache first
-    if endpoint in cache and region_id in cache[endpoint]:
-        return cache[endpoint][region_id]
+    if endpoint in _region_name_cache and region_id in _region_name_cache[endpoint]:
+        return _region_name_cache[endpoint][region_id]
     
     try:
         response = requests.get(f"{API_WILAYAH_BASE_URL}{endpoint}")
         response.raise_for_status()
         data = response.json()
         # Populate cache for the entire endpoint
-        if endpoint not in cache:
-            cache[endpoint] = {str(item['id']): item['name'] for item in data}
+        if endpoint not in _region_name_cache:
+            _region_name_cache[endpoint] = {str(item['id']): item['name'] for item in data}
         
-        return cache[endpoint].get(str(region_id))
+        return _region_name_cache[endpoint].get(str(region_id))
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Error fetching region data from {endpoint} for ID {region_id}: {e}")
-    return None
+    return "Tidak Diketahui"
 
 # ===============================
 # 1. Fungsi Prediksi Individu (Hybrid: SAW Score + KNN Prediction)
 # ===============================
-def predict_individual_status(penerima_obj, knn_model, passing_grade, logger, cache):
+def predict_individual_status(penerima_obj, knn_model, passing_grade, logger):
     # --- SAW Score Calculation ---
     skor_individu = 0
     alasan_penambah = []
@@ -94,10 +96,10 @@ def predict_individual_status(penerima_obj, knn_model, passing_grade, logger, ca
     max_total_nilai_global = 10 + len(PENAMBAH_KRITERIA_FIELDS)
     skor_saw_individu = skor_individu / max_total_nilai_global if max_total_nilai_global != 0 else 0.0
 
-    provinsi_name = _get_region_name(penerima_obj.provinsi, 'provinces.json', logger, cache)
-    kabupaten_name = _get_region_name(penerima_obj.kabupaten, f'regencies/{penerima_obj.provinsi}.json', logger, cache)
-    kecamatan_name = _get_region_name(penerima_obj.kecamatan, f'districts/{penerima_obj.kabupaten}.json', logger, cache)
-    desa_name = _get_region_name(penerima_obj.desa, f'villages/{penerima_obj.kecamatan}.json', logger, cache)
+    provinsi_name = _get_region_name(penerima_obj.provinsi, 'provinces.json', logger)
+    kabupaten_name = _get_region_name(penerima_obj.kabupaten, f'regencies/{penerima_obj.provinsi}.json', logger)
+    kecamatan_name = _get_region_name(penerima_obj.kecamatan, f'districts/{penerima_obj.kabupaten}.json', logger)
+    desa_name = _get_region_name(penerima_obj.desa, f'villages/{penerima_obj.kecamatan}.json', logger)
 
     return {
         "nama": penerima_obj.nama,

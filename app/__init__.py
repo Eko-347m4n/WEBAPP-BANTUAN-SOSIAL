@@ -28,18 +28,8 @@ def create_app(config_class=Config):
     
 
     with app.app_context():
-        # Load model once
-        try:
-            model_path = os.path.join(os.path.dirname(__file__), 'models', 'knn_model.pkl')
-            if os.path.exists(model_path):
-                app.extensions['knn_model'] = joblib.load(model_path)
-                app.logger.info("Model KNN berhasil dimuat saat aplikasi dimulai.")
-            else:
-                app.extensions['knn_model'] = None
-                app.logger.error(f"Model KNN tidak ditemukan di {model_path} saat aplikasi dimulai.")
-        except Exception as e:
-            app.extensions['knn_model'] = None
-            app.logger.error(f"Error memuat model KNN saat aplikasi dimulai: {str(e)}")
+        from app.utils.model_handler import load_knn_model
+        app.extensions['knn_model'] = load_knn_model()
 
     # Impor dan daftarkan Blueprint di sini
     from app.routes.auth_routes import auth_bp
