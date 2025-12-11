@@ -59,10 +59,10 @@ class SettingForm(FlaskForm):
 
 class PenerimaForm(FlaskForm):
     nama = StringField('Nama Lengkap', validators=[DataRequired(), Length(max=150)])
-    provinsi = SelectField('Provinsi', choices=[('', '-- Pilih Provinsi --')], validators=[DataRequired(message="Pilih provinsi.")])
-    kabupaten = SelectField('Kabupaten/Kota', choices=[('', '-- Pilih Kabupaten/Kota --')], validators=[DataRequired(message="Pilih kabupaten/kota.")])
-    kecamatan = SelectField('Kecamatan', choices=[('', '-- Pilih Kecamatan --')], validators=[DataRequired(message="Pilih kecamatan.")])
-    desa = SelectField('Desa', choices=[('', '-- Pilih Desa --')], validators=[DataRequired(message="Pilih desa.")])
+    provinsi = SelectField('Provinsi', choices=[('', '-- Pilih Provinsi --')], validators=[DataRequired(message="Pilih provinsi.")], validate_choice=False)
+    kabupaten = SelectField('Kabupaten/Kota', choices=[('', '-- Pilih Kabupaten/Kota --')], validators=[DataRequired(message="Pilih kabupaten/kota.")], validate_choice=False)
+    kecamatan = SelectField('Kecamatan', choices=[('', '-- Pilih Kecamatan --')], validators=[DataRequired(message="Pilih kecamatan.")], validate_choice=False)
+    desa = SelectField('Desa', choices=[('', '-- Pilih Desa --')], validators=[DataRequired(message="Pilih desa.")], validate_choice=False)
     pekerjaan = SelectField('Pekerjaan', choices=[
         ('', '-- Pilih Pekerjaan --'),
         ('PNS', 'PNS'),

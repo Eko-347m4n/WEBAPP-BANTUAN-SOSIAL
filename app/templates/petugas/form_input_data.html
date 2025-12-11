@@ -77,10 +77,26 @@
     <div class="row justify-content-center">
         <div class="col-md-10 col-lg-9">
             <div class="card shadow-lg border-0">
-                <div class="card-header bg-success text-white">
-                    <h3 class="mb-0"><i class="fas fa-user-plus"></i> {{ title }}</h3>
+                <div class="card-header {{ header_bg_class }} text-white">
+                    <h3 class="mb-0"><i class="{{ header_icon }}"></i> {{ title }}</h3>
                 </div>
                 <div class="card-body p-4">
+                    {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Terdapat kesalahan:</h5>
+                        <ul class="mb-0 pl-3">
+                            {% for field, errors in form.errors.items() %}
+                                {% for error in errors %}
+                                    <li><strong>{{ form[field].label.text }}:</strong> {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    {% endif %}
+
                     <div id="wizard-stepper" class="step-indicator">
                         <div class="step active" data-step="1">
                             <div class="step-icon">1</div>
@@ -234,7 +250,7 @@
                         <div class="d-flex justify-content-between">
                             <button type="button" class="btn btn-secondary" id="prev-btn" style="display: none;">Sebelumnya</button>
                             <button type="button" class="btn btn-primary" id="next-btn">Berikutnya</button>
-                            {{ form.submit(class="btn btn-success", id="submit-btn", style="display: none;") }}
+                            {{ form.submit(class="btn btn-success", id="submit-btn", style="display: none;", value=submit_button_text) }}
                         </div>
                     </form>
                 </div>
@@ -259,6 +275,14 @@
         const kabupatenSelect = document.getElementById('kabupaten');
         const kecamatanSelect = document.getElementById('kecamatan');
         const desaSelect = document.getElementById('desa');
+        const isEditMode = {{ is_edit|tojson }};
+
+        {% if is_edit and penerima %}
+        var penerimaProvinsi = "{{ penerima.provinsi }}";
+        var penerimaKabupaten = "{{ penerima.kabupaten }}";
+        var penerimaKecamatan = "{{ penerima.kecamatan }}";
+        var penerimaDesa = "{{ penerima.desa }}";
+        {% endif %}
 
         const apiBaseUrl = 'https://www.emsifa.com/api-wilayah-indonesia/api/';
 
@@ -295,26 +319,26 @@
 
                 // If in edit mode, pre-select and disable
                 {% if is_edit and penerima %}
-                    provinsiSelect.value = "{{ penerima.provinsi }}";
+                    provinsiSelect.value = penerimaProvinsi;
                     provinsiSelect.disabled = true;
                     // Populate next level
-                    populateSelect(kabupatenSelect, apiBaseUrl + `regencies/{{ penerima.provinsi }}.json`, "{{ penerima.kabupaten }}")
-                        .then(() => {
+                    populateSelect(kabupatenSelect, apiBaseUrl + 'regencies/' + penerimaProvinsi + '.json', penerimaKabupaten)
+                        .then(function() {
                             kabupatenSelect.disabled = true;
-                            return populateSelect(kecamatanSelect, apiBaseUrl + `districts/{{ penerima.kabupaten }}.json`, "{{ penerima.kecamatan }}");
+                            return populateSelect(kecamatanSelect, apiBaseUrl + 'districts/' + penerimaKabupaten + '.json', penerimaKecamatan);
                         })
-                        .then(() => {
+                        .then(function() {
                             kecamatanSelect.disabled = true;
-                            return populateSelect(desaSelect, apiBaseUrl + `villages/{{ penerima.kecamatan }}.json`, "{{ penerima.desa }}");
+                            return populateSelect(desaSelect, apiBaseUrl + 'villages/' + penerimaKecamatan + '.json', penerimaDesa);
                         })
-                        .then(() => {
+                        .then(function() {
                             desaSelect.disabled = true;
                         });
                 {% endif %}
             });
 
         provinsiSelect.addEventListener('change', function () {
-            if ({{ 'true' if is_edit else 'false' }}) return; // Prevent change if in edit mode
+            if (isEditMode) return; // Prevent change if in edit mode
             const provinsiId = this.value;
             resetSelect(kabupatenSelect, 'Pilih Kabupaten/Kota');
             resetSelect(kecamatanSelect, 'Pilih Kecamatan');
@@ -326,7 +350,7 @@
         });
 
         kabupatenSelect.addEventListener('change', function () {
-            if ({{ 'true' if is_edit else 'false' }}) return; // Prevent change if in edit mode
+            if (isEditMode) return; // Prevent change if in edit mode
             const kabupatenId = this.value;
             resetSelect(kecamatanSelect, 'Pilih Kecamatan');
             resetSelect(desaSelect, 'Pilih Desa');
@@ -337,7 +361,7 @@
         });
 
         kecamatanSelect.addEventListener('change', function () {
-            if ({{ 'true' if is_edit else 'false' }}) return; // Prevent change if in edit mode
+            if (isEditMode) return; // Prevent change if in edit mode
             const kecamatanId = this.value;
             resetSelect(desaSelect, 'Pilih Desa');
 

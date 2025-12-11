@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container pt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-search-dollar"></i> {{ title }}</h3>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted mb-4">
+                        Masukkan nama warga untuk melakukan prediksi kelayakan bantuan sosial secara individual. 
+                        Pastikan data warga sudah diinput sebelumnya.
+                    </p>
+
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="form-group">
+                            {{ form.nama.label(class="form-control-label") }}
+                            <div class="input-group">
+                                {{ form.nama(class="form-control" + (" is-invalid" if form.nama.errors else ""), placeholder="Nama Lengkap Warga") }}
+                                <div class="input-group-append">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </div>
+                            {% if form.nama.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.nama.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="form-text text-muted">Contoh: Budi Santoso</small>
+                        </div>
+                    </form>
+
+                    {% if prediction %}
+                        <hr class="my-4">
+                        <div class="results-section">
+                            <h4 class="mb-3 text-center">Hasil Prediksi</h4>
+                            
+                            <div class="alert {% if prediction.status_kelayakan_knn == 'Layak' and prediction.skor_saw_ternormalisasi >= setting.passing_grade %}alert-success{% else %}alert-danger{% endif %} text-center">
+                                <h2 class="alert-heading font-weight-bold">
+                                    {% if prediction.status_kelayakan_knn == 'Layak' and prediction.skor_saw_ternormalisasi >= setting.passing_grade %}
+                                        LAYAK MENERIMA BANTUAN
+                                    {% else %}
+                                        TIDAK LAYAK MENERIMA BANTUAN
+                                    {% endif %}
+                                </h2>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light font-weight-bold">Informasi Warga</div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Nama:</span>
+                                                <strong>{{ prediction.nama }}</strong>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Provinsi:</span>
+                                                <span>{{ prediction.provinsi }}</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Kabupaten/Kota:</span>
+                                                <span>{{ prediction.kabupaten }}</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Kecamatan:</span>
+                                                <span>{{ prediction.kecamatan }}</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between">
+                                                <span>Desa:</span>
+                                                <span>{{ prediction.desa }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card mb-3">
+                                        <div class="card-header bg-light font-weight-bold">Detail Skor</div>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <span>Skor SAW:</span>
+                                                <span class="badge badge-info badge-pill">{{ prediction.skor_saw_ternormalisasi }}</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <span>Passing Grade:</span>
+                                                <span class="badge badge-secondary badge-pill">{{ prediction.passing_grade_digunakan_saw }}</span>
+                                            </li>
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                <span>Status KNN:</span>
+                                                <span class="badge {% if prediction.status_kelayakan_knn == 'Layak' %}badge-success{% else %}badge-danger{% endif %} badge-pill">{{ prediction.status_kelayakan_knn }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header bg-light font-weight-bold">Analisis Kriteria</div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="text-success"><i class="fas fa-plus-circle"></i> Faktor Penambah Skor</h6>
+                                            {% if prediction.alasan['Faktor Penambah Skor'] %}
+                                                <ul class="pl-3">
+                                                    {% for faktor in prediction.alasan['Faktor Penambah Skor'] %}
+                                                        <li>{{ faktor }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                <p class="text-muted small">Tidak ada faktor penambah.</p>
+                                            {% endif %}
+                                            
+                                            {% if prediction.alasan['DTKS'] %}
+                                                <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+                                                    <i class="fas fa-check-circle"></i> Terdaftar di DTKS (+10 Poin)
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="text-danger"><i class="fas fa-minus-circle"></i> Faktor Pengurang Skor</h6>
+                                            {% if prediction.alasan['Faktor Pengurang Skor'] %}
+                                                <ul class="pl-3">
+                                                    {% for faktor in prediction.alasan['Faktor Pengurang Skor'] %}
+                                                        <li>{{ faktor }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% else %}
+                                                <p class="text-muted small">Tidak ada faktor pengurang.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <small class="text-muted">Dihitung pada: {{ prediction.timestamp }}</small>
+                            </div>
+
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

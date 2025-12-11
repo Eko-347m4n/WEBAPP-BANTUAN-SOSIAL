@@ -220,6 +220,14 @@ def eligible_recipients():
             'status_kelayakan_knn': penerima_obj.status_kelayakan_knn
         })
 
+    return render_template(
+        'petugas/eligible_recipients.html',
+        title='Daftar Penerima Layak',
+        eligible_list=eligible_list_data,
+        passing_grade=passing_grade,
+        kuota=kuota
+    )
+
 @petugas_bp.route('/eligible_recipients/pdf')
 @login_required
 def eligible_recipients_pdf():
@@ -278,7 +286,7 @@ def tambah_penerima():
             pekerjaan=form.pekerjaan.data,
             dtks=str_to_bool(form.dtks.data),
             keluarga_miskin_ekstrem=str_to_bool(form.keluarga_miskin_ekstrem.data),
-            kehilangan_mata_pencarian=str_to_bool(form.kehilangan_mata_pencaharian.data),
+            kehilangan_mata_pencaharian=str_to_bool(form.kehilangan_mata_pencaharian.data),
             tidak_bekerja=str_to_bool(form.tidak_bekerja.data),
             difabel=str_to_bool(form.difabel.data),
             penyakit_kronis=str_to_bool(form.penyakit_kronis.data),
@@ -301,8 +309,22 @@ def tambah_penerima():
         db.session.commit()
         flash('Data penerima berhasil ditambahkan!', 'success')
         return redirect(url_for('petugas.list_penerima'))
+    
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error pada {getattr(form, field).label.text}: {error}", 'error')
+                current_app.logger.error(f"Validation error on field {field}: {error}")
         
-    return render_template('petugas/form_input_data.html', title='Input Data Penerima Baru', form=form)
+    return render_template(
+        'petugas/form_input_data.html',
+        title='Input Data Penerima Baru',
+        form=form,
+        is_edit=False,
+        header_icon='fas fa-user-plus',
+        header_bg_class='bg-success',
+        submit_button_text='Simpan Data Penerima'
+    )
 
 @petugas_bp.route('/list_penerima')
 @login_required
@@ -344,6 +366,12 @@ def edit_penerima(penerima_id):
         flash('Data penerima berhasil diperbarui!', 'success')
         return redirect(url_for('petugas.list_penerima'))
 
+    if form.errors:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error pada {getattr(form, field).label.text}: {error}", 'error')
+                current_app.logger.error(f"Validation error on field {field}: {error}")
+
     form.dtks.data = str(penerima.dtks)
     form.keluarga_miskin_ekstrem.data = str(penerima.keluarga_miskin_ekstrem)
     form.kehilangan_mata_pencaharian.data = str(penerima.kehilangan_mata_pencaharian)
@@ -362,7 +390,16 @@ def edit_penerima(penerima_id):
     form.kecamatan.data = penerima.kecamatan
     form.desa.data = penerima.desa
 
-    return render_template('petugas/form_input_data.html', title='Edit Data Penerima', form=form, is_edit=True)
+    return render_template(
+        'petugas/form_input_data.html',
+        title='Edit Data Penerima',
+        form=form,
+        is_edit=True,
+        penerima=penerima, # Pass the penerima object for pre-filling dropdowns
+        header_icon='fas fa-edit',
+        header_bg_class='bg-info',
+        submit_button_text='Update Data Penerima'
+    )
 
 @petugas_bp.route('/hapus_penerima/<int:penerima_id>', methods=['POST'])
 @login_required
